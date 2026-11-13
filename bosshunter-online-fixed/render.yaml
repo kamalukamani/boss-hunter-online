@@ -1,8 +1,0 @@
-services:
-  - type: web
-    name: boss-hunter-3d
-    runtime: node
-    plan: free           # free tier; sleeps after 15 minutes without traffic
-    buildCommand: "true"
-    startCommand: node server.js
-    healthCheckPath: /healthz
