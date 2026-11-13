@@ -1,0 +1,9 @@
+{
+  "name": "boss-hunter-3d",
+  "version": "1.0.0",
+  "description": "FPS boss hunter game with online co-op rooms",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "license": "MIT"
+}
