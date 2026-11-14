@@ -1,42 +1,21 @@
-# BOSS HUNTER 3D — เว็บเกมออนไลน์
+# BOSS HUNTER 3D (เว็บเกมออนไลน์)
 
-โปรเจกต์นี้มีทั้งหน้าเกมและเซิร์ฟเวอร์ห้องออนไลน์อยู่ใน ZIP เดียวกัน
+ไฟล์ในโฟลเดอร์นี้คือเว็บทั้งเว็บ: `server.js` (เสิร์ฟหน้าเกมและเป็นตัวกลางห้องออนไลน์ผ่าน WebSocket ไม่ต้องติดตั้งแพ็กเกจเพิ่ม) กับ `public/index.html` (ตัวเกม)
 
-- `public/index.html` — หน้าเกม
-- `server.js` — เว็บเซิร์ฟเวอร์และ WebSocket สำหรับห้องออนไลน์
-- `render.yaml` — ตั้งค่า Deploy บน Render Free
+## ลองในเครื่อง
+    node server.js
+    เปิด http://localhost:3000
 
-## ทดสอบในเครื่อง
+## ทำให้เข้าเล่นได้ตลอดเวลา
+ต้องนำไปรันบนเซิร์ฟเวอร์ที่เปิดตลอด 24 ชั่วโมงและรองรับ WebSocket เลือกอย่างใดอย่างหนึ่ง
 
-ต้องติดตั้ง Node.js 18 ขึ้นไป จากนั้นเปิด Terminal ในโฟลเดอร์นี้แล้วรัน:
+**Render** (ง่ายสุด): ผลักโฟลเดอร์นี้ขึ้น GitHub > Render > New > Blueprint (ใช้ `render.yaml`) หรือ New Web Service ตั้ง Start Command เป็น `node server.js` แผนฟรีจะหลับเมื่อไม่มีคนเข้า ถ้าต้องการให้ตื่นตลอดให้ใช้แผนที่เสียเงินขั้นต่ำ
 
-```bash
-node server.js
-```
+**Fly.io / Railway / Koyeb**: มี `Dockerfile` ให้แล้ว (`fly launch` หรือเชื่อม GitHub repo) ตัวแปร `PORT` อ่านจาก environment อัตโนมัติ
 
-เปิด `http://localhost:3000` ในเบราว์เซอร์
+**VPS ของตัวเอง**: `npm i -g pm2 && pm2 start server.js --name bosshunter && pm2 save` แล้วตั้ง nginx/Caddy เป็น HTTPS และเปิด WebSocket (`proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";`)
 
-## Deploy ฟรีบน Render (แนะนำ)
+ต้องใช้ HTTPS เพื่อให้เสียงและการล็อกเมาส์ทำงานครบ และให้ส่งต่อ header `Host` ตามจริง เพราะเซิร์ฟเวอร์ตรวจ Origin ให้ตรงกับโดเมนของเว็บ (ถ้าจำเป็นต้องข้ามโดเมน ตั้ง `ALLOW_ANY_ORIGIN=1`)
 
-**อย่าอัปโหลดเฉพาะ `public/` ไป Netlify Drop** เพราะระบบห้องออนไลน์ต้องใช้ `server.js` และ WebSocket
-
-1. แตกไฟล์ ZIP นี้ลงในโฟลเดอร์
-2. สร้าง Repository ใหม่บน GitHub แล้วอัปโหลดไฟล์และโฟลเดอร์ทั้งหมด โดยให้ `server.js`, `package.json`, `render.yaml` และ `public/` อยู่ที่ระดับบนสุด
-3. เข้า https://dashboard.render.com/ แล้วเชื่อมบัญชี GitHub
-4. เลือก **New > Blueprint**
-5. เลือก Repository ที่อัปโหลดไว้ แล้วทำตามขั้นตอนสร้างบริการจาก `render.yaml`
-6. ตรวจสอบว่า Instance Plan เป็น **Free** แล้ว Deploy
-7. เมื่อ Deploy สำเร็จ เปิด URL ที่ลงท้ายด้วย `.onrender.com`
-
-Render Free จะพักบริการหลังไม่มีทราฟฟิกประมาณ 15 นาที และอาจใช้เวลาประมาณหนึ่งนาทีในการตื่นเมื่อมีคนเข้าใหม่ การเชื่อมต่อห้องอาจหลุดเมื่อบริการรีสตาร์ตหรือ Deploy ใหม่
-
-## ตรวจสอบเซิร์ฟเวอร์
-
-เปิด `https://ชื่อบริการ.onrender.com/healthz` ควรเห็น JSON ที่มี `"ok":true`
-
-## หมายเหตุ
-
-- ผู้เล่นทุกคนต้องเข้าเกมจาก URL ของ Render เดียวกัน
-- เกมนี้ใช้ WebSocket ที่ path `/ws`
-- ห้องรองรับผู้เล่นสูงสุด 8 คนตามค่าที่กำหนดใน `server.js`
-- Free tier มีข้อจำกัดด้านชั่วโมงใช้งาน แบนด์วิดท์ และการพักบริการ ดูรายละเอียดได้ที่ https://render.com/docs/free
+## ตรวจสถานะ
+`/healthz` แสดงจำนวนการเชื่อมต่อและห้องที่เปิดอยู่
