@@ -78,6 +78,7 @@ body.fight #hud{display:block}
 #wpAmmo{font:700 38px/1 var(--display)}
 #wpAmmo small{font-size:18px;color:var(--muted);font-weight:500}
 #wpAmmo.low{color:var(--red)}
+#chgBar{position:fixed;left:50%;top:57%;transform:translateX(-50%);width:180px;height:10px;border:1px solid #62ecff;background:#0008;display:none;z-index:7;pointer-events:none}#chgBar i{display:block;height:100%;width:0;background:#62ecff}#chgBar.full i{background:#fff;box-shadow:0 0 14px #62ecff,0 0 28px #62ecff}
 #wpMsg{font:600 12px var(--display);letter-spacing:.14em;color:var(--amber);height:16px}
 #money{position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:14px;font:700 20px var(--display);color:var(--amber);text-shadow:0 2px 6px #000;letter-spacing:.04em}
 #toast{position:absolute;left:50%;top:84px;transform:translateX(-50%);font:600 14px var(--display);letter-spacing:.08em;color:var(--green);text-shadow:0 2px 6px #000;opacity:0;transition:opacity .3s;text-align:center}
@@ -124,7 +125,6 @@ body.touch.fight #touch{display:block}
 #tReload{right:calc(max(22px,env(safe-area-inset-right,0px)) + 92px);bottom:104px}
 #tSwap{right:calc(max(22px,env(safe-area-inset-right,0px)) + 168px);bottom:84px}
 #tSprint{left:max(24px,env(safe-area-inset-left,0px));bottom:170px}
-#tCharge{right:calc(max(22px,env(safe-area-inset-right,0px)) + 8px);bottom:238px;width:68px;height:68px;border-color:#62ecff;color:#9ff6ff}\n#tCharge{right:calc(max(22px,env(safe-area-inset-right,0px)) + 8px);bottom:238px;width:68px;height:68px;border-color:#62ecff;color:#9ff6ff}
 #tS1{right:22px;bottom:240px}#tS2{right:100px;bottom:262px}#tS3{right:178px;bottom:262px}
 #tPause{right:max(16px,env(safe-area-inset-right,0px));top:46px}
 
@@ -259,7 +259,7 @@ body.touch.fight #touch{display:block}
     <div id="money"></div>
     <div id="pl"><div class="hpRow"><span id="hpNum">150</span><small>HP</small></div><div class="hpTrack"><div id="hpFill"></div></div><div class="shRow" id="shRow"><small>SHIELD</small><span id="shNum">0</span><div class="hpTrack shT"><div id="shFill"></div></div></div></div>
     <div id="skillBar"><div class="sk" id="sk0"><b>Z</b>คลื่นดาบ<i></i></div><div class="sk" id="sk1"><b>X</b>พายุดาบ<i></i></div><div class="sk" id="sk2"><b>V</b>ฟ้าผ่าสังหาร<i></i></div></div>
-    <div id="wp"><div id="wpMsg"></div><div id="wpAmmo"></div><div id="wpName"></div></div>
+    <div id="chgBar"><i></i></div><div id="wp"><div id="wpMsg"></div><div id="wpAmmo"></div><div id="wpName"></div></div>
   </div>
   <div id="dmgLayer" class="layer"></div>
 
@@ -272,7 +272,7 @@ body.touch.fight #touch{display:block}
     <button class="tb" id="tJump">JUMP</button>
     <button class="tb" id="tReload">R</button>
     <button class="tb" id="tSwap">SWAP</button>
-    <button class="tb" id="tDodge">DODGE</button><button class="tb" id="tCharge">CHARGE</button><button class="tb" id="tCharge">CHARGE</button>
+    <button class="tb" id="tDodge">DODGE</button>
     <button class="tb tsk" id="tS1">Z</button><button class="tb tsk" id="tS2">X</button><button class="tb tsk" id="tS3">V</button>
     <button class="tb sm" id="tPause">II</button>
   </div>
@@ -306,7 +306,7 @@ body.touch.fight #touch{display:block}
     <div class="ctlH">การเคลื่อนไหว</div>
     <div class="ctlGrid"><div><kbd>W A S D</kbd>เดิน</div><div><kbd>Shift</kbd>วิ่ง</div><div><kbd>Space</kbd>กระโดด</div><div><kbd>C / Ctrl</kbd>หลบ (ไม่โดนสกิล)</div></div>
     <div class="ctlH">การต่อสู้</div>
-    <div class="ctlGrid"><div><kbd>เมาส์ซ้าย</kbd>ยิง / ฟัน</div><div><kbd>เมาส์ขวา</kbd>เล็ง</div><div><kbd>R</kbd>รีโหลด</div><div><kbd>F</kbd>ชาร์จยิงปืนเลเซอร์ (ใช้ 10 นัด ดาเมจ x10)</div><div><kbd>F</kbd>ชาร์จยิงปืนเลเซอร์ (ใช้ 10 นัด ดาเมจ x10)</div><div><kbd>1–3</kbd>เปลี่ยนอาวุธ</div><div><kbd>Q</kbd>สลับอาวุธล่าสุด</div><div><kbd>Z / X / V</kbd>สกิลดาบ</div></div>
+    <div class="ctlGrid"><div><kbd>เมาส์ซ้าย</kbd>ยิง / ฟัน</div><div><kbd>เมาส์ขวา</kbd>เล็ง (ปืนเลเซอร์: กดค้างชาร์จ x10)</div><div><kbd>R</kbd>รีโหลด</div><div><kbd>1–3</kbd>เปลี่ยนอาวุธ</div><div><kbd>Q</kbd>สลับอาวุธล่าสุด</div><div><kbd>Z / X / V</kbd>สกิลดาบ</div></div>
     <div class="ctlH">เมนู</div>
     <div class="ctlGrid"><div><kbd>Esc / P</kbd>พักเกม</div></div>
     <div class="ctlH">ตั้งค่าเสียง</div>
@@ -429,19 +429,19 @@ const wrapPi=a=>{while(a>Math.PI)a-=TAU;while(a<-Math.PI)a+=TAU;return a;};
 
 /* =====================  DATA  ===================== */
 const WEAPONS=[
- {id:'pistol',name:'PISTOL',th:'ปืนพก',price:0,dmg:24,rpm:360,auto:false,mag:12,res:96,reload:1.2,spread:.5,pellets:1,recoil:.7,zoom:1.3,tr:0xffd27a,desc:'ปืนพกมาตรฐาน แม่นยำและเชื่อถือได้'},
+ {id:'pistol',name:'PISTOL',th:'ปืนพก',price:0,dmg:24,rpm:360,auto:false,mag:12,res:96,reload:1.2,spread:.5,pellets:1,recoil:.7,zoom:1.3,tr:0xffd27a,desc:'ปืนพกมาตรฐาน กระสุนไม่จำกัด แม่นยำและเชื่อถือได้'},
  {id:'smg',name:'SMG',th:'ปืนกลมือ',price:3000,dmg:15,rpm:840,auto:true,mag:32,res:192,reload:1.5,spread:1.7,pellets:1,recoil:.5,zoom:1.3,tr:0xffe29a,desc:'ยิงรัวเร็ว เหมาะกับการวิ่งวนรอบบอส'},
  {id:'ar',name:'ASSAULT RIFLE',th:'ปืนไรเฟิลจู่โจม',price:8000,dmg:28,rpm:600,auto:true,mag:30,res:180,reload:1.9,spread:1.0,pellets:1,recoil:.8,zoom:1.5,tr:0xffe29a,desc:'ปืนเอนกประสงค์ สมดุลทั้งพลังและความแม่น'},
  {id:'shotgun',name:'SHOTGUN',th:'ปืนลูกซอง',price:12000,dmg:22,rpm:75,auto:false,mag:6,res:48,reload:2.4,spread:4.2,pellets:9,recoil:2.2,zoom:1.2,tr:0xffc27a,desc:'พลังทำลายสูงในระยะใกล้ กระสุน 9 เม็ดต่อนัด'},
  {id:'sniper',name:'SNIPER RIFLE',th:'ปืนสไนเปอร์',price:22000,dmg:230,rpm:48,auto:false,mag:5,res:35,reload:2.7,spread:.04,pellets:1,recoil:3,zoom:4,tr:0xfff0c0,desc:'ยิงไกล หนักมาก เล็งหัวหรือจุดอ่อนให้ได้ความเสียหายสูงสุด'},
  {id:'hmg',name:'HEAVY MACHINE GUN',th:'ปืนกลหนัก',price:38000,dmg:34,rpm:720,auto:true,mag:100,res:400,reload:4.2,spread:1.9,pellets:1,recoil:.9,zoom:1.3,tr:0xffb55a,desc:'กระสุน 100 นัด กระหน่ำไม่หยุด แต่รีโหลดช้า'},
- {id:'plasma',laser:true,name:'PLASMA GUN',th:'ปืนพลาสม่า',price:65000,dmg:95,rpm:330,auto:true,mag:40,res:200,reload:2.2,spread:.35,pellets:1,recoil:.6,zoom:1.4,tr:0x6fe3ff,desc:'อาวุธล้ำยุค พลังงานสูง แม่นยำ ทำลายเกราะได้ดี'},
+ {id:'plasma',laser:true,name:'PLASMA GUN',th:'ปืนพลาสม่า',price:65000,dmg:95,rpm:330,auto:true,mag:40,res:200,reload:2.2,spread:.35,pellets:1,recoil:.6,zoom:1.4,tr:0x6fe3ff,desc:'อาวุธล้ำยุค พลังงานสูง แม่นยำ ทำลายเกราะได้ดี · คลิกขวาค้างเพื่อชาร์จ ปล่อยแล้วยิงแรงสูงสุด x10 (ใช้กระสุนมาก)'},
  {id:'minigun',name:'MINIGUN',th:'ปืนมินิกัน',price:110000,dmg:17,rpm:1800,auto:true,mag:200,res:800,reload:5.2,spread:2.6,pellets:1,recoil:.25,zoom:1.25,tr:0xff9a3a,desc:'ลำกล้องหมุน ยิงรัวสุดโหด 30 นัดต่อวินาที กระสุนเริ่มต้น 200 นัด'},
  {id:'barrett',name:'BARRETT .50 CAL',th:'ปืนบาเรท',price:250000,dmg:12000,rpm:60,auto:true,mag:8,res:40,reload:3.4,spread:.03,pellets:1,recoil:4.5,zoom:5,tr:0xfff0c0,desc:'ปืนสไนเปอร์ต่อต้านวัตถุ ยิงนัดละ 12,000 กดค้างยิงต่อเนื่องได้ เล็งหัวหรือจุดอ่อนให้แม่น'},
  {id:'sword',name:'BLADE OF RUIN',th:'ดาบทำลายล้าง',price:180000,dmg:3500,rpm:90,auto:true,mag:1,res:0,reload:1,spread:0,pellets:1,recoil:0,zoom:1,melee:true,tr:0xff8a3a,desc:'ดาบอาวุธประชิดแรงสูงสุด ฟันระยะใกล้ดาเมจมหาศาล มี 3 สกิล: Z คลื่นดาบ · X พายุดาบหมุน (อมตะชั่วคราว) · V ฟ้าผ่าสังหาร'},
  {id:'rpg',name:'RPG DEVASTATOR',th:'อาร์พีจี',price:5000000,dmg:1000000,rpm:30,auto:false,mag:1,res:8,reload:5.5,spread:.1,pellets:1,recoil:6,zoom:1.4,rocket:true,tr:0xffa040,desc:'จรวดต่อสู้รถถัง ยิงได้ทีละ 1 นัด รีโหลดนาน ดาเมจ 1,000,000 ระเบิดโดนบอสแม้ยิงใกล้ๆ'},
- {id:'alien',laser:true,name:'ALIEN LASER PISTOL',th:'ปืนพกเลเซอร์เอเลียน',price:1000000,dmg:10000,rpm:240,auto:true,mag:7,res:84,reload:1.6,spread:.25,pellets:1,recoil:.8,zoom:1.4,tr:0x6dff8a,desc:'ปืนพกเลเซอร์จากต่างดาว ยิงรัวปานกลาง 7 นัดต่อแม็ก ดาเมจนัดละ 10,000'},
- {id:'starmg',laser:true,name:'NOVA STORM',th:'ปืนกลอวกาศ',price:20000000,dmg:120000,rpm:600,auto:true,mag:100,res:600,reload:3.2,spread:1.1,pellets:1,recoil:.4,zoom:1.3,tr:0xc58bff,desc:'ปืนกลพลังงานจากห้วงอวกาศ ยิงรัว 10 นัดต่อวินาที นัดละ 120,000 แรงที่สุดในเกม กระสุน 100 นัดต่อแม็ก'},
+ {id:'alien',laser:true,name:'ALIEN LASER PISTOL',th:'ปืนพกเลเซอร์เอเลียน',price:1000000,dmg:10000,rpm:240,auto:true,mag:7,res:84,reload:1.6,spread:.25,pellets:1,recoil:.8,zoom:1.4,tr:0x6dff8a,desc:'ปืนพกเลเซอร์จากต่างดาว ยิงรัวปานกลาง 7 นัดต่อแม็ก ดาเมจนัดละ 10,000 · คลิกขวาค้างเพื่อชาร์จ ปล่อยแล้วยิงแรงสูงสุด x10 (ใช้กระสุนมาก)'},
+ {id:'starmg',laser:true,name:'NOVA STORM',th:'ปืนกลอวกาศ',price:20000000,dmg:120000,rpm:600,auto:true,mag:100,res:600,reload:3.2,spread:1.1,pellets:1,recoil:.4,zoom:1.3,tr:0xc58bff,desc:'ปืนกลพลังงานจากห้วงอวกาศ ยิงรัว 10 นัดต่อวินาที นัดละ 120,000 แรงที่สุดในเกม กระสุน 100 นัดต่อแม็ก · คลิกขวาค้างเพื่อชาร์จ ปล่อยแล้วยิงแรงสูงสุด x10 (ใช้กระสุนมาก)'},
  {id:'lsword',name:'LASER BLADE',th:'ดาบเลเซอร์',price:6000000,dmg:8000,rpm:100,auto:true,mag:1,res:0,reload:1,spread:0,pellets:1,recoil:0,zoom:1,melee:true,tr:0x62ecff,desc:'ดาบเลเซอร์ฟันนัดละ 8,000 · 3 สกิล: Z พุ่งแทง 200,000 · X ปาดาบวนกลับมา 250,000 · V ลำแสงเลเซอร์ชาร์จ 2 วิ 400,000'}
 ];
 WEAPONS.sort((x,y)=>x.price-y.price);
@@ -2016,14 +2016,14 @@ function setupTouch(){
   hold('tFire',()=>{IN.fire=true;IN.fireEdge=true;},()=>{IN.fire=false;});
   hold('tJump',()=>{IN.jumpT=true;},()=>{IN.jumpT=false;});
   const tap=(id,fn)=>$(id).addEventListener('pointerdown',e=>{fn();e.preventDefault();e.stopPropagation();});
-  tap('tReload',()=>{if(mode==='fight')startReload();});tap('tCharge',()=>{if(mode==='fight')startLaserCharge();});tap('tCharge',()=>{if(mode==='fight')startLaserCharge();});tap('tDodge',()=>{if(mode==='fight')tryDodge();});tap('tSwap',()=>{if(mode==='fight')cycleWeapon(1);});tap('tS1',()=>useSkill(0));tap('tS2',()=>useSkill(1));tap('tS3',()=>useSkill(2));
-  tap('tAim',()=>{IN.ads=!IN.ads;$('tAim').classList.toggle('on',IN.ads);});tap('tSprint',()=>{IN.sprintT=!IN.sprintT;$('tSprint').classList.toggle('on',IN.sprintT);});
+  tap('tReload',()=>{if(mode==='fight')startReload();});tap('tDodge',()=>{if(mode==='fight')tryDodge();});tap('tSwap',()=>{if(mode==='fight')cycleWeapon(1);});tap('tS1',()=>useSkill(0));tap('tS2',()=>useSkill(1));tap('tS3',()=>useSkill(2));
+  const isL=()=>!!(W[WS.cur]&&W[WS.cur].laser);tap('tAim',()=>{if(isL())IN.ads=true;else IN.ads=!IN.ads;$('tAim').classList.toggle('on',IN.ads);});['pointerup','pointercancel','pointerleave'].forEach(ev=>$('tAim').addEventListener(ev,()=>{if(isL()){IN.ads=false;$('tAim').classList.remove('on');}}));tap('tSprint',()=>{IN.sprintT=!IN.sprintT;$('tSprint').classList.toggle('on',IN.sprintT);});
   tap('tPause',()=>{if(mode==='fight')pauseGame();});
 }
 let suppressPause=false;
 
 /* =====================  WEAPON STATE  ===================== */
-const WS={cur:'pistol',last:'pistol',ammo:{},cd:0,reload:0,reloadMax:1,swap:0,swapTo:null,ads:0,bloom:0,kick:0,flashT:0,pump:0,sx:0,sy:0,msg:'',msgT:0,empty:0,sk:[0,0,0],swing:0,swDir:1,whirl:0,whirlA:0,whirlT:0,slamAir:0,chargeT:0};
+const WS={cur:'pistol',last:'pistol',ammo:{},cd:0,reload:0,reloadMax:1,swap:0,swapTo:null,ads:0,bloom:0,kick:0,flashT:0,pump:0,sx:0,sy:0,msg:'',msgT:0,empty:0,sk:[0,0,0],swing:0,swDir:1,whirl:0,whirlA:0,whirlT:0,slamAir:0};
 let STAR=null;
 function setGunModel(id){
   setGun(id);
@@ -2032,10 +2032,10 @@ function setGunModel(id){
   const f=new THREE.Sprite(new THREE.SpriteMaterial({map:STAR,blending:THREE.AdditiveBlending,transparent:true,depthWrite:false,fog:false}));f.visible=false;
   VM.gun.userData.muz.add(f);VM.flash=f;
 }
-function initAmmo(){WS.ammo={};WS.chargeT=0;WS.sk=[0,0,0];WS.swing=0;WS.whirl=0;WS.slamAir=0;const LO=loadout();WEAPONS.forEach(w=>{if(save.owned[w.id]&&LO.includes(w.id)){const s=statsOf(w.id);WS.ammo[w.id]={mag:s.mag,res:w.id==='pistol'?Infinity:s.res};}});}
+function initAmmo(){WS.ammo={};WS.chg=0;WS.sk=[0,0,0];WS.swing=0;WS.whirl=0;WS.slamAir=0;const LO=loadout();WEAPONS.forEach(w=>{if(save.owned[w.id]&&LO.includes(w.id)){const s=statsOf(w.id);WS.ammo[w.id]={mag:s.mag,res:w.id==='pistol'?Infinity:s.res};}});}
 function selectSlot(i){const id=loadout()[i],w=id&&W[id];if(!w||!WS.ammo[w.id]||w.id===WS.cur||WS.swapTo===w.id)return;startSwap(w.id);}
 function cycleWeapon(d){const own=loadout().map(id=>W[id]).filter(w=>w&&WS.ammo[w.id]);if(own.length<2)return;let i=own.findIndex(w=>w.id===(WS.swapTo||WS.cur));i=(i+d+own.length)%own.length;startSwap(own[i].id);}
-function startSwap(id){if(!WS.ammo[id])return;WS.swapTo=id;WS.swap=.44;WS.reload=0;updateSkillHud();sfxSwap();}
+function startSwap(id){if(!WS.ammo[id])return;WS.swapTo=id;WS.swap=.44;WS.reload=0;sfxSwap();}
 function startReload(){
   if(WS.reload>0||WS.swap>0)return;const st=statsOf(WS.cur),a=WS.ammo[WS.cur];if(!a||a.mag>=st.mag||a.res<=0)return;
   WS.reload=WS.reloadMax=st.reload;sfxReload(WS.cur,st.reload);IN.ads=IS_TOUCH?IN.ads:IN.ads;
@@ -2061,17 +2061,16 @@ function castRay(o,d,maxD){
   }
   return best;
 }
-function fireWeapon(dmgMul=1,ammoCost=1){
+function fireWeapon(dmgMul=1,cost=1){
   const w=W[WS.cur],st=statsOf(WS.cur),a=WS.ammo[WS.cur];
-  if(!a||a.mag<ammoCost)return false;
-  if(w.id!=='pistol')a.mag-=ammoCost;NET.fc++;WS.cd=60/st.rpm;sfxShot(w.id);
+  a.mag=Math.max(0,a.mag-cost);NET.fc++;WS.cd=60/st.rpm;sfxShot(w.id);
   let sp=st.spread*(1+WS.bloom*.9);if(P.sp>1)sp*=1.35;if(!P.ground)sp*=2.2;if(WS.ads>.5)sp*=.5;
   camera.getWorldDirection(_fw);const o=camera.position.clone();
   const mz=VM.gun.userData.muz.getWorldPosition(new THREE.Vector3());
   const maxD=w.id==='shotgun'?70:220;
   for(let i=0;i<w.pellets;i++){
     const d=coneDir(_fw,sp*Math.PI/180).clone(),h=castRay(o,d,maxD),pt=o.clone().addScaledVector(d,h.t);
-    if(w.rocket){launchRocket(mz,d,h,pt,st.dmg*dmgMul,w);continue;}
+    if(w.rocket){launchRocket(mz,d,h,pt,st.dmg,w);continue;}
     tracer(WS.ads>.6&&(w.id==='sniper'||w.id==='barrett')?o.clone().addScaledVector(d,1.2).add(new THREE.Vector3(0,-.1,0)):mz,pt,w.tr,w.id==='plasma'?.04:w.id==='barrett'?.05:w.id==='sniper'?.02:w.id==='minigun'?.008:.012);
     if(h.kind==='boss')hitBoss(boss,h.s,st.dmg*dmgMul,pt,h.t,w);
     else if(h.kind==='prop'){fx(pt,4,0xaaa6a0,3,.35,.05,6,.4);}
@@ -2080,37 +2079,27 @@ function fireWeapon(dmgMul=1,ammoCost=1){
   }
   const rc=w.recoil*st.rec*.0175;P.pitch=clamp(P.pitch+rc*.55*rnd(.7,1.15),-1.5,1.5);P.yaw+=rnd(-1,1)*rc*.25;P.kickP+=rc*.5;
   WS.bloom=Math.min(1.6,WS.bloom+(w.auto?.12:.3));WS.kick=1;WS.flashT=.055;WS.pump=w.id==='shotgun'?.6:0;
-  if(VM.flash){VM.flash.material.color.setHex(w.id==='plasma'?0x6fe3ff:w.id==='alien'?0x6dff8a:w.id==='starmg'?0xc58bff:0xffffff);VM.flash.material.rotation=rnd(0,TAU);const s=(w.id==='shotgun'||w.id==='hmg'||w.id==='barrett'?.8:w.id==='minigun'?.5:w.id==='pistol'?.3:.42)*rnd(.85,1.2);VM.flash.scale.set(s,s,1);VM.flash.visible=true;}
+  if(VM.flash){VM.flash.material.color.setHex(w.id==='plasma'?0x6fe3ff:w.id==='alien'?0x6dff8a:w.id==='starmg'?0xc58bff:0xffffff);VM.flash.material.rotation=rnd(0,TAU);const s=(dmgMul>1?1.6:1)*(w.id==='shotgun'||w.id==='hmg'||w.id==='barrett'?.8:w.id==='minigun'?.5:w.id==='pistol'?.3:.42)*rnd(.85,1.2);VM.flash.scale.set(s,s,1);VM.flash.visible=true;}
   mzLight.color.setHex(w.id==='plasma'?0x4fd8ff:0xffc060);mzLight.intensity=w.id==='plasma'?3:2.2;
   if(w.id==='sniper'||w.id==='barrett'){WS.ads=Math.max(0,WS.ads-.25);}
   if(a.mag<=0&&a.res>0)WS.autoReload=.25;
-  refreshAmmo();return true;
-}
-function startLaserCharge(){
-  const w=W[WS.cur],a=WS.ammo[WS.cur];
-  if(mode!=='fight'||P.dead||menuOpen||WS.swap>0||!w||!w.laser||!a||WS.chargeT>0)return;
-  if(a.mag<10){setWpMsg('ต้องใช้กระสุน 10 นัดในการชาร์จ');return;}
-  if(WS.reload>0||WS.cd>0)return;
-  WS.chargeT=1.25;setWpMsg('กำลังชาร์จเลเซอร์...');toast('ชาร์จยิงพลังงานสูง');
+  refreshAmmo();
 }
 function updateWeapon(dt,ctrl){
   const w=W[WS.cur],st=statsOf(WS.cur),a=WS.ammo[WS.cur];
   WS.cd=Math.max(0,WS.cd-dt);WS.bloom=Math.max(0,WS.bloom-dt*1.8);WS.kick=Math.max(0,WS.kick-dt*9);WS.pump=Math.max(0,WS.pump-dt);WS.flashT=Math.max(0,WS.flashT-dt);
   if(WS.autoReload>0){WS.autoReload-=dt;if(WS.autoReload<=0)startReload();}
   if(WS.swap>0){WS.swap-=dt;if(WS.swapTo&&WS.swap<=.22){WS.last=WS.cur;WS.cur=WS.swapTo;WS.swapTo=null;setGunModel(WS.cur);save.equip=WS.cur;WS.cd=.1;refreshAmmo();}if(WS.swap<0)WS.swap=0;}
-  if(WS.chargeT>0){
-    WS.chargeT-=dt;
-    if(WS.chargeT<=0){
-      WS.chargeT=0;
-      if(ctrl&&W[WS.cur]&&W[WS.cur].laser&&WS.ammo[WS.cur].mag>=10){
-        fireWeapon(10,10);toast('เลเซอร์ชาร์จ! ดาเมจ x10 · ใช้กระสุน 10 นัด');
-      }else setWpMsg('ยกเลิกการชาร์จ');
-    }
-  }
   if(WS.reload>0){WS.reload-=dt;if(WS.reload<=0){WS.reload=0;finishReload();refreshAmmo();}}
-  const wantAds=ctrl&&IN.ads&&!w.melee&&WS.reload<=0&&WS.swap<=0&&!(K.ShiftLeft&&P.sp>6);
+  const cFull=Math.min(st.mag,10);
+  if(w.laser&&ctrl&&WS.reload<=0&&WS.swap<=0){
+    if(IN.ads){if(a.mag>=cFull)WS.chg=Math.min(1,WS.chg+dt/1.3);else if(WS.empty<=0){setWpMsg('กระสุนไม่พอชาร์จ (ต้อง '+cFull+' นัด)');WS.empty=.7;}}
+    else if(WS.chg>0){if(WS.chg>=.15&&WS.cd<=0){const c=Math.max(1,Math.ceil(cFull*WS.chg));if(a.mag>=c){fireWeapon(1+9*WS.chg,c);if(WS.chg>=1)toast('CHARGED SHOT x10');}}WS.chg=0;}
+  }else if(WS.chg>0&&(!w.laser||WS.reload>0||WS.swap>0))WS.chg=0;
+  {const cb=$('chgBar');if(cb){const on=WS.chg>0;if(on!==WS._cbOn){WS._cbOn=on;cb.style.display=on?'block':'none';}if(on&&cb.firstChild){cb.firstChild.style.width=(WS.chg*100).toFixed(0)+'%';cb.classList.toggle('full',WS.chg>=1);}}}
+  const wantAds=ctrl&&IN.ads&&!w.melee&&!w.laser&&WS.reload<=0&&WS.swap<=0&&!(K.ShiftLeft&&P.sp>6);
   WS.ads=damp(WS.ads,wantAds?1:0,wantAds?12:14,dt);
-  if(ctrl&&WS.chargeT<=0&&IN.fire&&WS.cd<=0&&WS.reload<=0&&WS.swap<=0&&(W[WS.cur].auto||IN.fireEdge)){
+  if(ctrl&&IN.fire&&WS.chg<=0&&!(w.laser&&IN.ads)&&WS.cd<=0&&WS.reload<=0&&WS.swap<=0&&(W[WS.cur].auto||IN.fireEdge)){
     if(w.melee)swordSlash();
     else if(a.mag>0)fireWeapon();
     else{if(a.res>0)startReload();else if(WS.empty<=0){sfxClick();WS.empty=.4;setWpMsg('หมดกระสุน!');}WS.cd=.15;}
@@ -2250,7 +2239,7 @@ function updateSwordFx(dt){
   }
 }
 function useSkill(i){
-  if(mode!=='fight'||P.dead||menuOpen||!W[WS.cur]||!W[WS.cur].melee||WS.swap>0||WS.swapTo||WS.sk[i]>0)return;
+  if(mode!=='fight'||P.dead||menuOpen||!W[WS.cur].melee||WS.swap>0||WS.swapTo||WS.sk[i]>0)return;
   if(WS.cur==='lsword'){useLSkill(i);return;}
   const st=statsOf('sword'),o=camera.position.clone();camera.getWorldDirection(_fw);
   WS.sk[i]=SKILLS[i].cd;
@@ -2264,7 +2253,7 @@ function useSkill(i){
   else{WS.slamAir=1.0;const fy=Math.atan2(-_fw.x,-_fw.z),sn=Math.sin(P.yaw),cs=Math.cos(P.yaw);P.vy=13;P.ground=false;P.vx+=-sn*17;P.vz+=-cs*17;P.inv=Math.max(P.inv,.6);toast('ฟ้าผ่าสังหาร!');sfxWhoosh(1);}
 }
 function updateSkillHud(){
-  const on=!!(W[WS.cur]&&W[WS.cur].melee&&mode==='fight'&&!menuOpen&&WS.swap<=0&&!WS.swapTo);const sb=$('skillBar');sb.classList.toggle('on',on);document.body.classList.toggle('sword',on);
+  const on=!!(W[WS.cur]&&W[WS.cur].melee&&mode==='fight'&&!menuOpen&&!P.dead&&WS.swap<=0&&!WS.swapTo);const sb=$('skillBar');sb.classList.toggle('on',on);document.body.classList.toggle('sword',on);
   if(!on)return;const SK=WS.cur==='lsword'?LSKILLS:SKILLS;
   if(updateSkillHud._w!==WS.cur){updateSkillHud._w=WS.cur;for(let i=0;i<3;i++)$('sk'+i).innerHTML='<b>'+'ZXV'[i]+'</b>'+SK[i].n+'<i></i>';}
   for(let i=0;i<3;i++){const e=$('sk'+i);e.querySelector('i').style.transform='scaleY('+(WS.sk[i]/SK[i].cd)+')';e.classList.toggle('rdy',WS.sk[i]<=0);}
@@ -2691,7 +2680,7 @@ function updatePickups(dt,t){
   for(let i=PICKS.length-1;i>=0;i--){const p=PICKS[i];p.g.rotation.y+=dt*1.8;p.g.position.y=.8+Math.sin(t*2.4+p.ph)*.15;
     if(!P.dead&&Math.hypot(P.pos.x-p.x,P.pos.z-p.z)<1.8){
       if(p.type==='hp'){if(P.hp>=P.maxHp){continue;}const sc=1+.1*perkLv('scav'),hh=Math.round(45*sc);P.hp=Math.min(P.maxHp,P.hp+hh);toast('+'+hh+' HP');}
-      else{WEAPONS.forEach(w=>{const a=WS.ammo[w.id];if(a&&w.id!=='pistol')a.res+=Math.round(statsOf(w.id).res*.35*(1+.1*perkLv('scav')));});toast('+กระสุนสำรอง');refreshAmmo();}
+      else{WEAPONS.forEach(w=>{const a=WS.ammo[w.id];if(a)a.res+=Math.round(statsOf(w.id).res*.35*(1+.1*perkLv('scav')));});toast('+กระสุนสำรอง');refreshAmmo();}
       sfxPickup();scene.remove(p.g);disposeTree(p.g);PICKS.splice(i,1);updateHud(true);}}
 }
 /* =====================  HUD  ===================== */
@@ -2707,9 +2696,9 @@ function updateHud(force){
   updateSkillHud();
 }
 function refreshAmmo(){
-  const a=WS.ammo[WS.cur];if(!a)return;const st=statsOf(WS.cur);$('tCharge').style.display=W[WS.cur].laser?'block':'none';
-  const el=$('wpAmmo');if(W[WS.cur].melee){el.innerHTML='∞<small> / Z X V</small>';el.classList.remove('low');}else if(WS.cur==='pistol'){el.innerHTML='∞<small> / ∞</small>';el.classList.remove('low');}else el.innerHTML=a.mag+'<small> / '+a.res+'</small>';if(!W[WS.cur].melee&&WS.cur!=='pistol')el.classList.toggle('low',a.mag<=Math.max(1,st.mag*.25));
-  const L=UPG.reduce((s,u)=>s+lv(WS.cur,u.k),0);$('wpName').textContent=W[WS.cur].name+(W[WS.cur].laser?'  ·  F CHARGE x10 / 10 AMMO':'')+(L?'  ·  UPG '+L:'');
+  const a=WS.ammo[WS.cur];if(!a)return;const st=statsOf(WS.cur);
+  const el=$('wpAmmo');if(W[WS.cur].melee){el.innerHTML='∞<small> / Z X V</small>';el.classList.remove('low');}else el.innerHTML=a.mag+'<small> / '+(a.res===Infinity?'∞':a.res)+'</small>';{const ta=$('tAim');if(ta){const lz=!!W[WS.cur].laser;ta.textContent=lz?'CHARGE':'AIM';}}if(!W[WS.cur].melee)el.classList.toggle('low',a.mag<=Math.max(1,st.mag*.25));
+  const L=UPG.reduce((s,u)=>s+lv(WS.cur,u.k),0);$('wpName').textContent=W[WS.cur].name+(L?'  ·  UPG '+L:'');
 }
 function setWpMsg(t){$('wpMsg').textContent=t;clearTimeout(setWpMsg.t);setWpMsg.t=setTimeout(()=>{$('wpMsg').textContent='';},1300);}
 function toast(t){const el=$('toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),2200);}
@@ -2775,7 +2764,7 @@ function beginFight(idx){
       arena=buildArena(def.map);scene.add(arena.g);applyEnv(arena.cfg);
       boss=makeBoss(def);boss.pos.set(0,0,-20);boss.yaw=Math.PI;boss.st='intro';boss.stT=0;boss.atkCd=2;
       if(NET.on){boss.maxHp=Math.round(def.hp*(1+.8*(NET.n-1)));boss.hp=boss.maxHp;}scene.add(boss.root);syncBoss(boss);
-      resetPlayer();if(NET.on)P.pos.set((NET.idx-(NET.n-1)/2)*3.5,0,26);P.respawn=0;initAmmo();WS.cur=(loadout().includes(save.equip)&&W[save.equip])?save.equip:loadout()[0];WS.last=WS.cur;WS.swap=0;WS.swapTo=null;WS.reload=0;WS.ads=0;WS.cd=.4;WS.bloom=0;setGunModel(WS.cur);
+      resetPlayer();if(NET.on)P.pos.set((NET.idx-(NET.n-1)/2)*Math.min(3.5,30/Math.max(1,NET.n-1)),0,26);P.respawn=0;initAmmo();WS.cur=(loadout().includes(save.equip)&&W[save.equip])?save.equip:loadout()[0];WS.last=WS.cur;WS.swap=0;WS.swapTo=null;WS.reload=0;WS.ads=0;WS.cd=.4;WS.bloom=0;setGunModel(WS.cur);
       if(!NET.on||NET.host){spawnPickRandom('hp');spawnPickRandom('ammo');}pickTimer=14;gt=0;TS=1;slowT=0;ghost=1;lastWin=null;
       $('bbName').textContent=def.name;$('bbTitle').textContent=def.title;const ch=$('bbDiff');ch.textContent=def.diff+(NET.on&&NET.n>1?' · CO-OP x'+NET.n:'');ch.style.color=def.diff==='EASY'?'var(--green)':def.diff==='MEDIUM'?'var(--amber)':def.diff==='HARD'?'#ff7a3a':'var(--red)';
       document.body.classList.add('fight');mode='fight';ambStart(def.map);refreshAmmo();updateHud(true);if(NET.on)netFightStart();
@@ -2837,7 +2826,7 @@ function updateFight(dt0){
 }
 let frameN=0;
 function frame(){
-  requestAnimationFrame(frame);if(noGL||!renderer)return;
+  requestAnimationFrame(frame);try{updateSkillHud();}catch(e){}if(noGL||!renderer)return;
   const dt0=Math.min(clock.getDelta(),.05);
   if(NET.on)netTick(dt0);
   if(mode==='fight'||mode==='ending')updateFight(dt0);
@@ -3107,7 +3096,7 @@ function netTakeover(){
 }
 function netHostStart(stage){
   if(!NET.on||!NET.host)return;
-  const ids=NET.peers.filter(p=>p.kind==='viewer').map(p=>p.peer).sort().slice(0,4);
+  const ids=NET.peers.filter(p=>p.kind==='viewer').map(p=>p.peer).sort().slice(0,10);
   const ev={s:stage,n:ids.length,f:(Date.now()%900000000)+1,ids:ids};
   netEvent('start',ev);netStartLocal(Object.assign({t:'start'},ev));
 }
@@ -3145,8 +3134,8 @@ function netFightTick(dt){
     if(P.dead){
       P.respawn-=dt;dn.textContent='คุณล้มลง · ฟื้นใน '+Math.max(0,Math.ceil(P.respawn))+' วิ';dn.classList.add('on');
       if(P.respawn<=0){
-        P.dead=false;P.hp=Math.round(P.maxHp*.6);P.deadT=0;P.pos.set((NET.idx-(NET.n-1)/2)*3.5,0,26);P.vx=P.vz=P.vy=0;P.inv=2.5;
-        WEAPONS.forEach(w=>{const a=WS.ammo[w.id];if(a&&w.id!=='pistol')a.res+=Math.round(statsOf(w.id).res*.2);});refreshAmmo();dn.classList.remove('on');updateHud(true);toast('ฟื้นคืนชีพ');
+        P.dead=false;P.hp=Math.round(P.maxHp*.6);P.deadT=0;P.pos.set((NET.idx-(NET.n-1)/2)*Math.min(3.5,30/Math.max(1,NET.n-1)),0,26);P.vx=P.vz=P.vy=0;P.inv=2.5;
+        WEAPONS.forEach(w=>{const a=WS.ammo[w.id];if(a)a.res+=Math.round(statsOf(w.id).res*.2);});refreshAmmo();dn.classList.remove('on');updateHud(true);toast('ฟื้นคืนชีพ');
       }
     }else dn.classList.remove('on');
   }
@@ -3260,7 +3249,7 @@ async function netEnter(code){
   setTimeout(()=>{
     if(!(NET.on&&NET.room===room))return;
     const ids=room.peers().filter(p=>p.kind==='viewer').map(p=>p.peer).sort();
-    if(ids.length>4&&ids.indexOf(NET.me)>=4){NET.err='ห้องเต็ม (สูงสุด 4 คน)';netLeave();}
+    if(ids.length>10&&ids.indexOf(NET.me)>=10){NET.err='ห้องเต็ม (สูงสุด 10 คน)';netLeave();}
   },2500);
   renderIfOnline();
 }
@@ -3281,7 +3270,7 @@ function netFail(e){
 function renderOnline(body){
   const mkEl=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;};
   const intro=mkEl('div','card');intro.style.cursor='default';
-  intro.appendChild(mkEl('h4',null,'CO-OP ออนไลน์ (สูงสุด 4 คน)'));
+  intro.appendChild(mkEl('h4',null,'CO-OP ออนไลน์ (สูงสุด 10 คน)'));
   intro.appendChild(mkEl('p',null,'บอสเลือดเพิ่ม +80% ต่อคน สกิลและการเคลื่อนไหวเร็วขึ้น +25% ต่อคน ได้เงินรางวัลโบนัส x1.5 ถ้าล้มลง เพื่อนช่วยสู้ต่อและคุณฟื้นเองใน 14 วินาที'));
   body.appendChild(intro);
   const me=mkEl('div','card');me.style.cursor='default';
