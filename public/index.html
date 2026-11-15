@@ -483,22 +483,22 @@ const upCost=(w,k,lv)=>Math.round((120+w.price*.07)*(lv+1)*(1+lv*.12)*(k==='crit
 const A_L0='เห้อ..พวกกระจอกพากันมาอีกแล้ว',A_L1='จงรับไป... ดาบดรรชนีเจิดจรัส!',A_L2='ได้แค่นี้หรอ... เอานี้ไปลองกินดู!!! ลำแสงอนุภาคค!!!',A_L3='แกไม่มีที่หนีอีกต่อไปแล้ว... จงดูข้า... ข้าคือพระเจ้ายังไงหละ... ไอพวกมนุษย์ชั้นต่ำ',A_L4='เจ้ามันอ่อนแอ',A_L5='…';
 const MAPS={inferno:'ลานนรกเพลิงมังกร',abyss:'อเวจีแห่งนักล่าสีน้ำเงิน',ruin:'ซากปรักหักพังแห่งเถ้าถ่าน',battle:'สนามรบกลางคืน',city:'เมืองที่ถูกสัตว์ประหลาดทำลาย',forest:'ป่าต้องสาป',lab:'โรงงานร้างและห้องทดลองลับ',space:'สมรภูมิอวกาศใต้ดวงจันทร์คู่'};
 const BOSS_DEF=[
- {id:'giant',name:'GORGOTH',title:'ยักษ์หินมหึมา',diff:'EASY',diffTh:'ง่าย',reward:500,hp:24000,map:'battle',scale:2.4,walk:3,run:5.2,rad:2.8,col:'#ff9a3c',voice:{pitch:.2,rate:.78},k:'giant',
+ {id:'giant',name:'GORGOTH',title:'ยักษ์หินมหึมา',diff:'EASY',diffTh:'ง่าย',reward:500,hp:15000,map:'battle',scale:2.4,walk:3,run:5.2,rad:2.8,col:'#ff9a3c',voice:{pitch:.2,rate:.78},k:'giant',
   desc:'ยักษ์หินสงครามผู้เฝ้าสนามรบ ช้าแต่หนักหน่วง ระวังพื้นสั่นสะเทือนและกระบอง',
   say:{intro:['เจ้ากล้าดียังไงถึงเข้ามาในอาณาเขตของข้า!'],atk:['จงรับความพินาศไปซะ!','ข้าจะบดเจ้าให้แหลกคามือ!','หนูตัวน้อย... หนีไม่พ้นหรอก!'],hit:['ฮึ่ม! แค่นี้หรือ?','เจ้าแมลงน่ารำคาญ!'],ph2:['เจ็บ...! เจ้ากล้าทำให้ข้าโกรธ!'],low:['เป็นไปไม่ได้... ข้าจะแพ้ไม่ได้!'],stagger:['อ๊ากกก!'],death:['นี่... ยังไม่ใช่จุดจบ...']}},
- {id:'beast',name:'VORRAX',title:'สัตว์ประหลาดจากอเวจี',diff:'MEDIUM',diffTh:'ปานกลาง',reward:1500,hp:56000,map:'city',scale:1.7,walk:2.8,run:5.4,rad:3.2,col:'#7dff6a',voice:{pitch:.1,rate:.7},k:'beast',
+ {id:'beast',name:'VORRAX',title:'สัตว์ประหลาดจากอเวจี',diff:'MEDIUM',diffTh:'ปานกลาง',reward:1500,hp:35000,map:'city',scale:1.7,walk:2.8,run:5.4,rad:3.2,col:'#7dff6a',voice:{pitch:.1,rate:.7},k:'beast',
   desc:'อสูรสี่ขาที่หิวโหย วิ่งเร็ว กัดแรง และพ่นกรดจากระยะไกล',
   say:{intro:['หิว... ข้าหิวเหลือเกิน... เนื้อสดๆ!'],atk:['กินเจ้าซะ!','ฉีกเป็นชิ้นๆ!','เหยื่อจ๋า... อย่าหนีสิ!'],hit:['ซ่าาา!','เลือดของข้า!'],ph2:['เลือด... เลือดของข้า! ข้าจะกลืนเจ้า!'],low:['ไม่... ข้ายัง... หิวอยู่...'],stagger:['กรี๊ดดด!'],death:['ความมืด... เรียกข้ากลับไป...']}},
- {id:'demon',name:'AZRAEL',title:'ปีศาจเพลิงนรก',diff:'HARD',diffTh:'ยาก',reward:3000,hp:110000,map:'forest',scale:1.55,walk:4.2,run:7,rad:2.2,col:'#ff5a1f',voice:{pitch:.7,rate:.88},k:'demon',
+ {id:'demon',name:'AZRAEL',title:'ปีศาจเพลิงนรก',diff:'HARD',diffTh:'ยาก',reward:3000,hp:70000,map:'forest',scale:1.55,walk:4.2,run:7,rad:2.2,col:'#ff5a1f',voice:{pitch:.7,rate:.88},k:'demon',
   desc:'เจ้าแห่งเปลวเพลิง ร่ายลูกไฟ เหาะหนีและวาร์ปมาหลังคุณเมื่อโกรธ',
   say:{intro:['วิญญาณใหม่มาถึงแล้ว... ข้าจะเผาเจ้าให้เป็นเถ้าถ่าน!'],atk:['เปลวเพลิงแห่งอเวจี จงเผาไหม้!','คุกเข่าซะ มนุษย์!','ความมืดคือเจ้านายของข้า!'],hit:['ฮ่าๆๆ! เจ็บหรือ? ไม่เลย!','เจ้าก็ทำได้แค่นี้!'],ph2:['พอแล้ว! ข้าจะปลดปล่อยพลังที่แท้จริง!'],low:['ไม่นะ... ข้าคือเจ้าแห่งนรก!'],stagger:['อ๊าาา!'],death:['ข้าจะกลับมา... นรกจะไม่ลืมเจ้า...']}},
- {id:'mech',name:'TITAN-X9',title:'หุ่นยนต์สงครามยักษ์',diff:'ULTIMATE',diffTh:'สุดยอด',reward:10000,hp:200000,map:'lab',scale:1.95,walk:3.6,run:6.2,rad:3.0,col:'#4fd8ff',voice:{pitch:.5,rate:1.05},k:'mech',
+ {id:'mech',name:'TITAN-X9',title:'หุ่นยนต์สงครามยักษ์',diff:'ULTIMATE',diffTh:'สุดยอด',reward:10000,hp:125000,map:'lab',scale:1.95,walk:3.6,run:6.2,rad:3.0,col:'#4fd8ff',voice:{pitch:.5,rate:1.05},k:'mech',
   desc:'เครื่องจักรสังหารขั้นสุดท้าย ขีปนาวุธ ปืนใหญ่ และคลื่นกระแทก เป้าหมายคือแกนพลังงานสีฟ้า',
   say:{intro:['ตรวจพบผู้บุกรุก. เริ่มโปรโตคอลกำจัดเป้าหมาย.'],atk:['เป้าหมายล็อกแล้ว. ทำลายล้าง.','ประมวลผล... โอกาสรอดชีวิต ศูนย์เปอร์เซ็นต์.','เปิดใช้งานระบบอาวุธ!'],hit:['ความเสียหายเล็กน้อย.','ตรวจพบการโจมตี.'],ph2:['เกราะเสียหาย. เปิดโหมดฉุกเฉิน.'],low:['คำเตือน! ระบบเสียหายร้ายแรง... ข้าจะแพ้ไม่ได้!'],stagger:['ระบบ... ขัดข้อง!'],death:['ระบบ... ล่ม... นี่... ยังไม่ใช่... จุดจบ...']}},
- {id:'cinder',name:'SOUL OF CINDER',title:'เถ้าถ่านผู้ถือดาบเพลิง',diff:'NIGHTMARE',diffTh:'นรกแตก',reward:30000,hp:380000,map:'ruin',scale:1.75,walk:5.4,run:9.5,rad:2.6,col:'#ff7a2a',voice:{pitch:.35,rate:.8},k:'cinder',
+ {id:'cinder',name:'SOUL OF CINDER',title:'เถ้าถ่านผู้ถือดาบเพลิง',diff:'NIGHTMARE',diffTh:'นรกแตก',reward:30000,hp:240000,map:'ruin',scale:1.75,walk:5.4,run:9.5,rad:2.6,col:'#ff7a2a',voice:{pitch:.35,rate:.8},k:'cinder',
   desc:'ราชาแห่งเปลวไฟผู้สุดท้าย สองร่าง ร่างแรกฟันดาบรวดเร็วเป็นชุด ร่างสองใหญ่ขึ้น ตีช้าลงแต่ทุกครั้งที่โดนคือหายนะ หลบให้ได้เท่านั้น',
   say:{intro:['เถ้าถ่านสุดท้ายยังไม่มอดดับ... ผู้กล้า จงเข้ามา!','ไฟนี้จะไม่มีวันดับ ตราบใดที่ข้ายังยืนอยู่'],atk:['จงมอดไหม้ไปพร้อมกับข้า!','ดาบเล่มนี้เคยสังหารเทพเจ้ามาแล้ว!','อย่าได้ท้าทายเปลวไฟ!'],hit:['ฮึ... ยังไม่พอ','เจ้าทำได้ดีกว่านี้ไหม?'],ph2:['เปลวไฟแห่งยุคสมัย... จงลุกโชนอีกครั้ง!','นี่แหละร่างแท้จริงของข้า... เจ้าไม่มีทางรอด!'],low:['ไฟยังไม่ดับ... ข้ายังไม่จบ!'],stagger:['อึก...!'],death:['ไฟ... ได้มอดดับแล้ว... ขอบใจ... ผู้กล้า']}},
- {id:'artorias',name:'ARTORIAS & SIF',title:'อัศวินอเวจีกับหมาป่าเทากายักษ์',diff:'ABYSS',diffTh:'อเวจีสูงสุด',reward:80000,hp:1080000,map:'abyss',scale:1.6,walk:6,run:11,rad:3.0,col:'#6fa8ff',voice:{pitch:.45,rate:.85},k:'artorias',
+ {id:'artorias',name:'ARTORIAS & SIF',title:'อัศวินอเวจีกับหมาป่าเทากายักษ์',diff:'ABYSS',diffTh:'อเวจีสูงสุด',reward:80000,hp:650000,map:'abyss',scale:1.6,walk:6,run:11,rad:3.0,col:'#6fa8ff',voice:{pitch:.45,rate:.85},k:'artorias',
   desc:'อาร์ทอเรียสอัศวินผู้ล่วงสู่อเวจี พร้อมซิฟหมาป่าเทาผู้ซื่อสัตย์ ฟันเร็ว พุ่งชนทะลวง หมาป่ากัดและพุ่งตัด เลือดมหาศาล ยิ่งสู้ยิ่งโหด 3 ระยะ',
   say:{intro:['ข้าคืออาร์ทอเรียส... ผู้ข้ามอเวจี... เจ้าจะไม่ผ่านไปไหนทั้งนั้น','ซิฟ... ไปกันเถอะ'],atk:['จงล้มลงเสีย!','ข้าจะไม่แพ้ให้ใครอีก!','รับดาบอเวจีของข้า!','ซิฟ ตะครุบมัน!'],hit:['ฮึ! อ่อนแอ','เจ้าทำได้แค่นี้หรือ?'],ph2:['อเวจีกำลังกลืนกินข้า... แต่ข้าจะยังสู้ต่อ!','ซิฟ! ไปกับข้า!'],low:['ข้ายังไม่ล้ม... ข้ายังไม่ล้ม!','อเวจี จงมอบพลังให้ข้า!'],stagger:['อ๊ากกก!'],death:['ซิฟ... ขอโทษนะ... ข้าทำได้แค่นี้...']}},
  {id:'dragon',name:'HULK NEMESIS',title:'ยักษ์เขียวคลั่งแห่งนรก',diff:'EXTREME',diffTh:'สุดโหด',reward:3000000,hp:30000000,map:'inferno',scale:2.1,walk:7,run:13,rad:3.8,col:'#ff5a1a',voice:{pitch:.3,rate:.78},k:'dragon',
@@ -1775,14 +1775,8 @@ function buildArena(id){
     const conc=mat(0x4a4a50,{roughness:1});
     ringPos(22,50,66,(x,z,a)=>{const w=R(11,17),h=R(20,48),d=R(11,16);const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),bm);b.position.set(x,h/2,z);b.rotation.y=-a;b.castShadow=true;add(b);
       if(rng()<.6){const t=bx(w*.7,6,d*.6,conc,x+R(-2,2),h+2,z);t.rotation.set(R(-.4,.4),-a,R(-.4,.4));add(t);}});
-    ringPos(7,26,36,(x,z,a)=>{const w=R(7,10),h=R(6,11);const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,w*.9),bm);b.position.set(x,h/2,z);b.rotation.y=R(0,TAU);b.castShadow=b.receiveShadow=true;add(b);
-      const t=bx(w*.8,2.5,w*.6,conc,x,h+.9,z);t.rotation.set(R(-.5,.5),b.rotation.y,R(-.5,.5));add(t);col(x,z,w*.62,h);});
-    const cars=[0x6a2a22,0x2a3a4a,0x4a4a2a,0x3a3a3a];
-    for(let i=0;i<9;i++){const a=R(0,TAU),r=R(8,34),cx=Math.cos(a)*r,cz=Math.sin(a)*r;const c=new THREE.Group();c.position.set(cx,0,cz);c.rotation.y=R(0,TAU);const m=mat(cars[i%4],{roughness:.6,metalness:.5});
-      c.add(bx(2,.8,4.4,m,0,.7,0));c.add(bx(1.8,.7,2.2,mat(0x15181c,{roughness:.2,metalness:.6}),0,1.35,-.1));for(const sx of [-1,1])for(const sz of [-1.4,1.4])c.add(cylz(.38,.38,.3,mat(0x101010),sx*1.0,.38,sz,10));
-      c.rotation.z=R(-.1,.1);add(c);col(cx,cz,2.2,1.6);}
     const lampM=mat(0x2a2d33,{metalness:.7,roughness:.5});
-    [[-16,-10],[18,14],[-22,20],[24,-18],[0,-34],[0,34]].forEach((p,i)=>{add(cyl(.12,.16,7,lampM,p[0],3.5,p[1],6));const hd=bx(.9,.2,.5,glow(0xffe0a0,i===0?2:1.2),p[0],7,p[1]);add(hd);col(p[0],p[1],.4,7);
+    [[-16,-10],[18,14],[-22,20],[24,-18],[0,-34],[0,34]].forEach((p,i)=>{add(cyl(.12,.16,7,lampM,p[0],3.5,p[1],6));const hd=bx(.9,.2,.5,glow(0xffe0a0,i===0?2:1.2),p[0],7,p[1]);add(hd);
       if(i===0)upd.push((dt,t)=>{const f=Math.sin(t*31)>.6||Math.sin(t*7)>.93?.2:1;hd.material.emissiveIntensity=2*f;});});
     [[-8,18],[14,-26],[28,6]].forEach(p=>{add(cyl(.7,.8,1,mat(0x3a2a22,{roughness:1}),p[0],.5,p[1],8));flame(p[0],1.1,p[1],1.6);});
     for(let i=0;i<40;i++){const s=R(.5,1.6),b=bx(s*R(1,3),s*R(.3,1),s*R(1,2),conc,R(-38,38),s*.2,R(-38,38));b.rotation.set(R(-.4,.4),R(0,TAU),R(-.4,.4));add(b);}
@@ -1798,14 +1792,10 @@ function buildArena(id){
       for(let k=0;k<2;k++){const b=cyl(.08*s,.2*s,3*s,trunk,0,h*.5,0,5);b.rotation.z=(k?1:-1)*R(.8,1.2);b.rotation.y=R(0,TAU);t.add(b);}
       add(t);if(collide)col(x,z,.9*s,h);};
     ringPos(58,44,76,(x,z)=>tree(x,z,R(1,1.5),false));
-    ringPos(30,22,40,(x,z)=>tree(x,z,R(.9,1.3),true));
-    ringPos(10,14,20,(x,z)=>tree(x,z,R(.8,1),true));
     const stone=mat(0x4a4a56,{roughness:1});
-    for(let i=0;i<14;i++){const a=R(0,TAU),r=R(8,34),x=Math.cos(a)*r,z=Math.sin(a)*r;const gs=bx(.9,1.5,.25,stone,x,.75,z);gs.rotation.set(R(-.15,.15),R(0,TAU),R(-.15,.15));add(gs);col(x,z,.6,1.5);}
     const mC=[0x4ffff0,0xff5ad9,0x8aff7a];
     for(let i=0;i<30;i++){const a=R(0,TAU),r=R(5,38),x=Math.cos(a)*r,z=Math.sin(a)*r,c=mC[i%3];add(cyl(.05,.08,.5,mat(0xc8c0d0),x,.25,z,5));const cap=sph(.28,glow(c,1.6),x,.52,z,1,.55,1);cap.castShadow=false;add(cap);}
     const rock=mat(0x35333f,{roughness:1});
-    for(let i=0;i<8;i++){const a=R(0,TAU),r=R(12,36),x=Math.cos(a)*r,z=Math.sin(a)*r,s=R(1.4,2.6);const rk=new THREE.Mesh(new THREE.IcosahedronGeometry(s,0),rock);rk.position.set(x,s*.6,z);rk.rotation.set(R(0,3),R(0,3),R(0,3));rk.scale.y=.75;rk.castShadow=rk.receiveShadow=true;add(rk);col(x,z,s*.95,s*1.2);}
     const wisps=[];for(let i=0;i<14;i++){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOWT,color:i%2?0x4ffff0:0xb06bff,blending:THREE.AdditiveBlending,transparent:true,depthWrite:false}));s.scale.set(1.6,1.6,1);const a=R(0,TAU),r=R(6,38);s.position.set(Math.cos(a)*r,R(1,4),Math.sin(a)*r);s.userData={a,r,sp:R(.05,.15),y:R(1,4),ph:R(0,6)};wisps.push(s);add(s);}
     upd.push((dt,t)=>{wisps.forEach(w=>{const u=w.userData;u.a+=u.sp*dt;w.position.set(Math.cos(u.a)*u.r,u.y+Math.sin(t*1.3+u.ph)*.6,Math.sin(u.a)*u.r);});});
     cfg.p2m=wisps[1];
