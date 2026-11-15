@@ -294,7 +294,7 @@ body.touch.fight #touch{display:block}
 
   <section id="sLobby" class="screen gut">
     <div class="lbLeft">
-      <div class="lbHead"><div class="logo">BOSS HUNTER <b>3D</b></div><div class="wallet"><span>เงินสะสม</span><strong id="lbMoney">$0</strong><em id="lbLv" style="display:block;font:600 12px var(--display);color:var(--cyan);font-style:normal;margin-top:2px">Lv 1</em><button class="btn" id="btnAdmin" style="padding:3px 9px;font-size:10px;margin-left:10px;opacity:.55">ADMIN</button></div></div>
+      <div class="lbHead"><div class="logo">BOSS HUNTER <b>3D</b></div><div class="wallet"><span>เงินสะสม</span><strong id="lbMoney">$0</strong><em id="lbLv" style="display:block;font:600 12px var(--display);color:var(--cyan);font-style:normal;margin-top:2px">Lv 1</em><div id="acct" style="margin-top:6px"></div><button class="btn" id="btnAdmin" style="padding:3px 9px;font-size:10px;margin-left:10px;opacity:.55">ADMIN</button></div></div>
       <nav class="tabs" id="lbTabs"><button data-tab="stages" class="on">ภารกิจ</button><button data-tab="shop">ร้านอาวุธ</button><button data-tab="upg">อัปเกรด</button><button data-tab="skills">สกิลติดตัว</button><button data-tab="online">ออนไลน์</button></nav>
       <div class="lbBody" id="lbBody"></div>
       <div class="lbFoot" id="lbFoot"></div>
@@ -486,7 +486,7 @@ const BOSS_DEF=[
  {id:'giant',name:'GORGOTH',title:'ยักษ์หินมหึมา',diff:'EASY',diffTh:'ง่าย',reward:500,hp:24000,map:'battle',scale:2.4,walk:3,run:5.2,rad:2.8,col:'#ff9a3c',voice:{pitch:.2,rate:.78},k:'giant',
   desc:'ยักษ์หินสงครามผู้เฝ้าสนามรบ ช้าแต่หนักหน่วง ระวังพื้นสั่นสะเทือนและกระบอง',
   say:{intro:['เจ้ากล้าดียังไงถึงเข้ามาในอาณาเขตของข้า!'],atk:['จงรับความพินาศไปซะ!','ข้าจะบดเจ้าให้แหลกคามือ!','หนูตัวน้อย... หนีไม่พ้นหรอก!'],hit:['ฮึ่ม! แค่นี้หรือ?','เจ้าแมลงน่ารำคาญ!'],ph2:['เจ็บ...! เจ้ากล้าทำให้ข้าโกรธ!'],low:['เป็นไปไม่ได้... ข้าจะแพ้ไม่ได้!'],stagger:['อ๊ากกก!'],death:['นี่... ยังไม่ใช่จุดจบ...']}},
- {id:'beast',name:'VORRAX',title:'สัตว์ประหลาดจากอเวจี',diff:'MEDIUM',diffTh:'ปานกลาง',reward:1500,hp:56000,map:'city',scale:1.7,walk:5,run:9.5,rad:3.2,col:'#7dff6a',voice:{pitch:.1,rate:.7},k:'beast',
+ {id:'beast',name:'VORRAX',title:'สัตว์ประหลาดจากอเวจี',diff:'MEDIUM',diffTh:'ปานกลาง',reward:1500,hp:56000,map:'city',scale:1.7,walk:2.8,run:5.4,rad:3.2,col:'#7dff6a',voice:{pitch:.1,rate:.7},k:'beast',
   desc:'อสูรสี่ขาที่หิวโหย วิ่งเร็ว กัดแรง และพ่นกรดจากระยะไกล',
   say:{intro:['หิว... ข้าหิวเหลือเกิน... เนื้อสดๆ!'],atk:['กินเจ้าซะ!','ฉีกเป็นชิ้นๆ!','เหยื่อจ๋า... อย่าหนีสิ!'],hit:['ซ่าาา!','เลือดของข้า!'],ph2:['เลือด... เลือดของข้า! ข้าจะกลืนเจ้า!'],low:['ไม่... ข้ายัง... หิวอยู่...'],stagger:['กรี๊ดดด!'],death:['ความมืด... เรียกข้ากลับไป...']}},
  {id:'demon',name:'AZRAEL',title:'ปีศาจเพลิงนรก',diff:'HARD',diffTh:'ยาก',reward:3000,hp:110000,map:'forest',scale:1.55,walk:4.2,run:7,rad:2.2,col:'#ff5a1f',voice:{pitch:.7,rate:.88},k:'demon',
@@ -521,7 +521,7 @@ function loadSave(){
   save.owned=Object.assign({pistol:true},save.owned);
   BOSS_DEF.forEach((d,i)=>{if(save.defeated&&save.defeated[d.id])save.unlocked=Math.max(save.unlocked||1,Math.min(BOSS_DEF.length,i+2));});
 }
-function writeSave(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save));}catch(e){}memSave=JSON.parse(JSON.stringify(save));}
+function writeSave(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save));}catch(e){}memSave=JSON.parse(JSON.stringify(save));if(typeof accPush==='function')accPush();}
 const hasSave=()=>{try{return !!localStorage.getItem(SAVE_KEY);}catch(e){return !!memSave;}};
 function lv(id,k){return (save.up[id]&&save.up[id][k])||0;}
 const MAXLO=3;
@@ -3347,6 +3347,54 @@ function renderSkills(body){
   const rs=document.createElement('button');rs.className='btn';rs.textContent='รีเซ็ตสกิลทั้งหมด (คืนแต้มฟรี)';rs.style.margin='8px 0';rs.onclick=()=>{save.sk={};writeSave();sfxClick();renderLobby();};body.appendChild(rs);
   showInfo('gun');
 }
+/* =====================  GOOGLE ACCOUNT + CLOUD SAVE  ===================== */
+const ACC={tok:'',name:'',pic:'',gid:'',on:false};
+try{ACC.tok=localStorage.getItem('bh_tok')||'';ACC.name=localStorage.getItem('bh_name')||'';ACC.pic=localStorage.getItem('bh_pic')||'';}catch(e){}
+const accScore=s=>s?((s.xp||0)+(s.money||0)+Object.keys(s.owned||{}).length*1000+Object.keys(s.defeated||{}).length*5000):-1;
+const accHdr=()=>({'Authorization':'Bearer '+ACC.tok,'Content-Type':'application/json'});
+let _accT=0;
+function accPush(){if(!ACC.on||!ACC.tok)return;clearTimeout(_accT);_accT=setTimeout(()=>{fetch('/api/save',{method:'PUT',headers:accHdr(),body:JSON.stringify({save})}).catch(()=>{});},2500);}
+function accRender(){
+  const box=$('acct');if(!box)return;box.innerHTML='';
+  if(!ACC.gid)return;
+  if(ACC.tok&&ACC.name){
+    const d=document.createElement('div');d.style.cssText='display:flex;align-items:center;gap:6px;justify-content:flex-end;font:600 12px var(--display);color:var(--text)';
+    if(ACC.pic){const im=document.createElement('img');im.src=ACC.pic;im.referrerPolicy='no-referrer';im.style.cssText='width:22px;height:22px;border-radius:50%';d.appendChild(im);}
+    const n=document.createElement('span');n.textContent=ACC.name;n.style.cssText='display:inline;letter-spacing:.04em;color:var(--text)';d.appendChild(n);
+    const b=document.createElement('button');b.className='btn';b.textContent='ออกจากระบบ';b.style.cssText='padding:3px 8px;font-size:11px';b.onclick=accLogout;d.appendChild(b);box.appendChild(d);
+  }else{
+    const g=document.createElement('div');g.id='gbtn';box.appendChild(g);
+    try{if(window.google&&google.accounts&&google.accounts.id)google.accounts.id.renderButton(g,{theme:'filled_black',size:'medium',text:'signin_with',shape:'rectangular'});}catch(e){}
+  }
+}
+function accLogout(){ACC.tok='';ACC.name='';ACC.pic='';try{['bh_tok','bh_name','bh_pic'].forEach(k=>localStorage.removeItem(k));}catch(e){}accRender();toast('ออกจากระบบแล้ว');}
+async function accPull(){
+  try{
+    const r=await fetch('/api/save',{headers:accHdr()});if(r.status===401){accLogout();return;}
+    const j=await r.json(),cloud=j&&j.save;
+    if(cloud&&accScore(cloud)>accScore(save)){save=Object.assign(defSave(),cloud);try{writeSave();}catch(e){}if(typeof renderLobby==='function')try{renderLobby();}catch(e){}toast('โหลดเซฟจากบัญชี Google แล้ว');}
+    else{accPush();}
+  }catch(e){}
+}
+async function accOnCred(resp){
+  try{
+    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:resp.credential})});
+    if(!r.ok)throw 0;const j=await r.json();ACC.tok=j.token;ACC.name=j.name;ACC.pic=j.pic||'';
+    try{localStorage.setItem('bh_tok',ACC.tok);localStorage.setItem('bh_name',ACC.name);localStorage.setItem('bh_pic',ACC.pic);}catch(e){}
+    if(!save.nick||save.nick==='Hunter'){save.nick=ACC.name.slice(0,14);if(typeof NET!=='undefined')NET.nick=save.nick;}
+    accRender();toast('ล็อคอินแล้ว: '+ACC.name);await accPull();
+  }catch(e){toast('ล็อคอินไม่สำเร็จ');}
+}
+async function accInit(){
+  try{
+    const c=await (await fetch('/api/config')).json();if(!c||!c.gid)return;ACC.gid=c.gid;ACC.on=true;
+    if(ACC.tok){const r=await fetch('/api/me',{headers:accHdr()});if(r.ok)accPull();else{ACC.tok='';ACC.name='';}}
+    const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;
+    s.onload=()=>{try{google.accounts.id.initialize({client_id:ACC.gid,callback:accOnCred});}catch(e){}accRender();};
+    s.onerror=()=>accRender();document.head.appendChild(s);accRender();
+  }catch(e){}
+}
+setTimeout(accInit,200);
 /* =====================  LOBBY / SHOP / UPGRADES  ===================== */
 const LB={tab:'stages',stage:0,weapon:'pistol',upMode:'weapon'};
 function bar(label,v,max){return '<span>'+label+'</span><div class="bar"><i style="width:'+clamp(v/max*100,3,100)+'%"></i></div>';}
