@@ -20,10 +20,10 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const rc=await(await c.use('room')).join('bh-other');await sleep(100);ok(rc.peers().length===1,'rooms are isolated');
   await rb.leave();await sleep(200);ok(ra.peers().length===1,'leave removes peer');
   // capacity
-  const extra=[];for(let i=0;i<8;i++){const s=makeClaudeShim('ws://localhost:'+PORT+'/ws',WebSocket);try{extra.push(await(await s.use('room')).join('bh-full'));}catch(e){extra.push(e);}}
-  ok(extra.filter(x=>x&&x.code==='limit_reached').length===0,'8 fit in a room');
+  const extra=[];for(let i=0;i<16;i++){const s=makeClaudeShim('ws://localhost:'+PORT+'/ws',WebSocket);try{extra.push(await(await s.use('room')).join('bh-full'));}catch(e){extra.push(e);}}
+  ok(extra.filter(x=>x&&x.code==='limit_reached').length===0,'16 fit in a room');
   const s9=makeClaudeShim('ws://localhost:'+PORT+'/ws',WebSocket);let err=null;try{await(await s9.use('room')).join('bh-full');}catch(e){err=e;}
-  ok(err&&err.code==='limit_reached','9th rejected');
+  ok(err&&err.code==='limit_reached','17th rejected');
   // bad origin
   const bad=new WebSocket('ws://localhost:'+PORT+'/ws',{headers:{Origin:'http://evil.example'}});
   const res=await new Promise(r=>{bad.onerror=()=>r('rejected');bad.onopen=()=>r('open');setTimeout(()=>r('timeout'),1500);});

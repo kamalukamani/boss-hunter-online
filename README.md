@@ -19,3 +19,10 @@
 
 ## ตรวจสถานะ
 `/healthz` แสดงจำนวนการเชื่อมต่อและห้องที่เปิดอยู่
+
+## ล็อคอินด้วย Google + เซฟบนเซิร์ฟเวอร์ (ไม่บังคับ)
+1. Google Cloud Console → APIs & Services → Credentials → Create OAuth client ID → ชนิด **Web application**
+2. ใส่ **Authorized JavaScript origins** = URL เว็บ Render ของคุณ (เช่น `https://ชื่อแอป.onrender.com`)
+3. คัดลอก Client ID (ลงท้าย `.apps.googleusercontent.com`) ไปใส่ใน Render → Environment → `GOOGLE_CLIENT_ID`
+4. (แนะนำ) ตั้ง `SESSION_SECRET` เป็นข้อความสุ่มยาวๆ และ `DATA_DIR` ชี้ไปที่ Render Disk (เช่น `/data`) ไม่งั้นเซฟจะหายเมื่อ Render รีสตาร์ท/ดีพลอยใหม่ (แพ็กเกจฟรีไม่มีดิสก์ถาวร)
+ถ้าไม่ตั้ง `GOOGLE_CLIENT_ID` ปุ่มล็อคอินจะไม่แสดงและเกมทำงานเหมือนเดิม

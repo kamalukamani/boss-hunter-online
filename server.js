@@ -2,14 +2,40 @@
 /* BOSS HUNTER 3D: static file + WebSocket room relay. Zero dependencies, Node 18+. */
 const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto'),zlib=require('zlib');
 const PORT=+process.env.PORT||3000;
-const MAX_ROOM=8,MAX_CONN=3000,MAX_MSG=16384,MAX_PRES=8192;
+const MAX_ROOM=16,MAX_CONN=3000,MAX_MSG=16384,MAX_PRES=8192;
 const html=fs.readFileSync(path.join(__dirname,'public','index.html'));
 const htmlGz=zlib.gzipSync(html,{level:9});
 const GUID='258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const rooms=new Map();let conns=0;
+/* ---- Google sign-in + cloud save ---- */
+const GID=process.env.GOOGLE_CLIENT_ID||'',DATA=process.env.DATA_DIR||path.join(__dirname,'data'),https=require('https');
+try{fs.mkdirSync(DATA,{recursive:true});}catch(e){}
+let SECRET=process.env.SESSION_SECRET||'';
+if(!SECRET){const f=path.join(DATA,'.secret');try{SECRET=fs.readFileSync(f,'utf8');}catch(e){SECRET=crypto.randomBytes(32).toString('hex');try{fs.writeFileSync(f,SECRET);}catch(e2){}}}
+const mkTok=sub=>{const exp=Date.now()+30*864e5,b=sub+'.'+exp;return b+'.'+crypto.createHmac('sha256',SECRET).update(b).digest('hex');};
+const chkTok=t=>{const p=String(t||'').split('.');if(p.length!==3||!/^\d{5,30}$/.test(p[0]))return null;const b=p[0]+'.'+p[1],h=crypto.createHmac('sha256',SECRET).update(b).digest('hex');
+  if(h.length!==p[2].length||!crypto.timingSafeEqual(Buffer.from(h),Buffer.from(p[2])))return null;return +p[1]>Date.now()?p[0]:null;};
+const tokOf=req=>chkTok((req.headers.authorization||'').replace(/^Bearer /,''));
+const gVerify=cred=>new Promise((ok,no)=>{https.get('https://oauth2.googleapis.com/tokeninfo?id_token='+encodeURIComponent(cred),r=>{let d='';r.on('data',c=>{d+=c;if(d.length>20000)r.destroy();});r.on('end',()=>{try{const j=JSON.parse(d);if(r.statusCode!==200||j.aud!==GID||!/^\d{5,30}$/.test(j.sub||'')||+j.exp*1000<Date.now())return no(new Error('bad'));ok(j);}catch(e){no(e);}});}).on('error',no);});
+const readBody=(req,max)=>new Promise((ok,no)=>{let n=0;const a=[];req.on('data',c=>{n+=c.length;if(n>max){no(new Error('big'));req.destroy();}else a.push(c);});req.on('end',()=>ok(Buffer.concat(a).toString()));req.on('error',no);});
+const jr=(res,code,o)=>{res.writeHead(code,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(o));};
+async function api(req,res,u){
+  try{
+    if(u==='/api/config')return jr(res,200,{gid:GID});
+    if(!GID)return jr(res,503,{err:'no_google'});
+    if(u==='/api/login'&&req.method==='POST'){const b=JSON.parse(await readBody(req,8000)),j=await gVerify(b.credential);return jr(res,200,{token:mkTok(j.sub),name:String(j.name||j.given_name||'Hunter').slice(0,40),pic:String(j.picture||'').slice(0,300)});}
+    const sub=tokOf(req);if(!sub)return jr(res,401,{err:'auth'});
+    const f=path.join(DATA,sub+'.json');
+    if(u==='/api/me')return jr(res,200,{ok:true});
+    if(u==='/api/save'&&req.method==='GET'){let d=null;try{d=JSON.parse(fs.readFileSync(f,'utf8'));}catch(e){}return jr(res,200,{save:d});}
+    if(u==='/api/save'&&req.method==='PUT'){const o=JSON.parse(await readBody(req,200000));if(!o||typeof o!=='object'||Array.isArray(o)||!o.save||typeof o.save!=='object')return jr(res,400,{err:'bad'});fs.writeFileSync(f+'.tmp',JSON.stringify(o.save));fs.renameSync(f+'.tmp',f);return jr(res,200,{ok:true});}
+    jr(res,404,{err:'nf'});
+  }catch(e){jr(res,400,{err:'bad'});}
+}
 
 const server=http.createServer((req,res)=>{
   const u=req.url.split('?')[0];
+  if(u.startsWith('/api/'))return api(req,res,u);
   if(req.method!=='GET'&&req.method!=='HEAD'){res.writeHead(405);return res.end();}
   if(u==='/'||u==='/index.html'){
     const gz=/\bgzip\b/.test(req.headers['accept-encoding']||'');
