@@ -3513,7 +3513,7 @@ function boot(){
   $('pQuit').onclick=()=>{goLobby('stages');};
   $('wAgain').onclick=()=>{$('sWin').classList.remove('on');const ix=(lastWin&&lastWin.idx!=null)?lastWin.idx:stageIdx;if(NET.on)netHostStart(ix);else beginFight(ix);};
   /* ---- ADMIN (client-side only: this is a convenience, not real security) ---- */
-  const ADMIN_PASS='admin1234';let admOn=false;
+  const ADMIN_PASS='1234';let admOn=false;
   const admShow=()=>{$('admNow').textContent=money(save.money);$('lbMoney').textContent=money(save.money);};
   const admOpen=()=>{$('sAdmin').classList.add('on');$('admLock').style.display=admOn?'none':'';$('admBody').style.display=admOn?'':'none';$('admErr').textContent='';$('admPass').value='';if(admOn)admShow();};
   const admClose=()=>{$('sAdmin').classList.remove('on');if(typeof renderLobby==='function'&&$('sLobby').classList.contains('on'))renderLobby();};
