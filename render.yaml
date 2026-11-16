@@ -7,6 +7,8 @@ services:
     startCommand: node server.js
     healthCheckPath: /healthz
     envVars:
+      - key: NODE_VERSION
+        value: 22
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: SESSION_SECRET

@@ -19,11 +19,12 @@ const tokOf=req=>chkTok((req.headers.authorization||'').replace(/^Bearer /,''));
 const gVerify=cred=>new Promise((ok,no)=>{https.get('https://oauth2.googleapis.com/tokeninfo?id_token='+encodeURIComponent(cred),r=>{let d='';r.on('data',c=>{d+=c;if(d.length>20000)r.destroy();});r.on('end',()=>{try{const j=JSON.parse(d);if(r.statusCode!==200||j.aud!==GID||!/^\d{5,30}$/.test(j.sub||'')||+j.exp*1000<Date.now())return no(new Error('bad'));ok(j);}catch(e){no(e);}});}).on('error',no);});
 const readBody=(req,max)=>new Promise((ok,no)=>{let n=0;const a=[];req.on('data',c=>{n+=c.length;if(n>max){no(new Error('big'));req.destroy();}else a.push(c);});req.on('end',()=>ok(Buffer.concat(a).toString()));req.on('error',no);});
 const jr=(res,code,o)=>{res.writeHead(code,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(o));};
+const ACCT=require('./accounts.js')(DATA);
 async function api(req,res,u){
   try{
-    if(u==='/api/config')return jr(res,200,{gid:GID});
-    if(!GID)return jr(res,503,{err:'no_google'});
-    if(u==='/api/login'&&req.method==='POST'){const b=JSON.parse(await readBody(req,8000)),j=await gVerify(b.credential);return jr(res,200,{token:mkTok(j.sub),name:String(j.name||j.given_name||'Hunter').slice(0,40),pic:String(j.picture||'').slice(0,300)});}
+    if(ACCT&&u!=='/api/config'&&await ACCT(req,res,u,readBody,jr))return;
+    if(u==='/api/config')return jr(res,200,{gid:GID,acct:!!ACCT,db:!!ACCT});
+    if(u==='/api/login'&&req.method==='POST'){if(!GID)return jr(res,503,{err:'no_google'});const b=JSON.parse(await readBody(req,8000)),j=await gVerify(b.credential);return jr(res,200,{token:mkTok(j.sub),name:String(j.name||j.given_name||'Hunter').slice(0,40),pic:String(j.picture||'').slice(0,300)});}
     const sub=tokOf(req);if(!sub)return jr(res,401,{err:'auth'});
     const f=path.join(DATA,sub+'.json');
     if(u==='/api/me')return jr(res,200,{ok:true});
