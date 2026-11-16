@@ -20,6 +20,8 @@ const gVerify=cred=>new Promise((ok,no)=>{https.get('https://oauth2.googleapis.c
 const readBody=(req,max)=>new Promise((ok,no)=>{let n=0;const a=[];req.on('data',c=>{n+=c.length;if(n>max){no(new Error('big'));req.destroy();}else a.push(c);});req.on('end',()=>ok(Buffer.concat(a).toString()));req.on('error',no);});
 const jr=(res,code,o)=>{res.writeHead(code,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(o));};
 const ACCT=require('./accounts.js')(DATA);
+if(!process.env.DATA_DIR)console.warn('[server] DATA_DIR is not set: accounts are stored in '+DATA+' which is wiped on every Render restart/deploy. Attach a Persistent Disk and set DATA_DIR=/data.');
+console.log('[server] data dir: '+DATA+' | server accounts: '+(ACCT?'ON':'OFF'));
 async function api(req,res,u){
   try{
     if(ACCT&&u!=='/api/config'&&await ACCT(req,res,u,readBody,jr))return;
@@ -43,7 +45,7 @@ const server=http.createServer((req,res)=>{
     res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache','X-Content-Type-Options':'nosniff',...(gz?{'Content-Encoding':'gzip'}:{})});
     return res.end(req.method==='HEAD'?undefined:(gz?htmlGz:html));
   }
-  if(u==='/healthz'){res.writeHead(200,{'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true,conns,rooms:rooms.size}));}
+  if(u==='/healthz'){res.writeHead(200,{'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true,conns,rooms:rooms.size,acct:!!ACCT,persistent:!!process.env.DATA_DIR}));}
   if(u==='/favicon.ico'){res.writeHead(204);return res.end();}
   res.writeHead(404,{'Content-Type':'text/plain'});res.end('not found');
 });

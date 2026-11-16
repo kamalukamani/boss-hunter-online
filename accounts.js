@@ -6,8 +6,10 @@ let DatabaseSync=null;try{({DatabaseSync}=require('node:sqlite'));}catch(e){}
 const MAXLV=50,expNeed=L=>Math.round(100*Math.pow(L,1.6));
 function lvInfo(xp){let L=1,r=Math.max(0,+xp||0);while(L<MAXLV&&r>=expNeed(L)){r-=expNeed(L);L++;}return{L,r:Math.floor(r),need:L>=MAXLV?0:expNeed(L)};}
 module.exports=function init(DATA){
-  if(!DatabaseSync)return null;
-  let db;try{fs.mkdirSync(DATA,{recursive:true});db=new DatabaseSync(path.join(DATA,'bosshunter.db'));}catch(e){return null;}
+  if(!DatabaseSync){console.error('[accounts] node:sqlite unavailable on Node '+process.version+' (need >=22.13). Server accounts DISABLED, game will fall back to browser-only accounts.');return null;}
+  const DBFILE=path.join(DATA,'bosshunter.db');
+  let db;try{fs.mkdirSync(DATA,{recursive:true});db=new DatabaseSync(DBFILE);}catch(e){console.error('[accounts] cannot open database at '+DBFILE+':',e.message);return null;}
+  console.log('[accounts] database ready at '+DBFILE);
   db.exec(`PRAGMA journal_mode=WAL;PRAGMA foreign_keys=ON;
   CREATE TABLE IF NOT EXISTS users(
     id INTEGER PRIMARY KEY AUTOINCREMENT,

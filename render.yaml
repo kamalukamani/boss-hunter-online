@@ -2,13 +2,19 @@ services:
   - type: web
     name: boss-hunter-3d
     runtime: node
-    plan: starter        # free plan sleeps after idle; starter stays on
+    plan: starter        # persistent disks need a paid plan
     buildCommand: "true"
     startCommand: node server.js
     healthCheckPath: /healthz
+    disk:
+      name: bosshunter-data
+      mountPath: /data
+      sizeGB: 1
     envVars:
       - key: NODE_VERSION
-        value: 22
+        value: 22.13.0
+      - key: DATA_DIR
+        value: /data
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: SESSION_SECRET
