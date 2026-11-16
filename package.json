@@ -1,9 +1,17 @@
 {
   "name": "boss-hunter-3d",
-  "version": "1.0.0",
-  "description": "FPS boss hunter game with online co-op rooms",
+  "version": "1.1.0",
+  "description": "FPS boss hunter game with online co-op rooms and MongoDB accounts",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
-  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node server.js",
+    "test:accounts": "node test_accounts.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "mongodb": "^6.17.0"
+  },
   "license": "MIT"
 }

@@ -1,121 +1,221 @@
 'use strict';
-/* Account system: SQLite (node:sqlite) + scrypt password hashing + server-side sessions.
-   Tables: users, player_data, sessions.  All queries are prepared statements (no SQL injection). */
-const crypto=require('crypto'),path=require('path'),fs=require('fs');
-let DatabaseSync=null;try{({DatabaseSync}=require('node:sqlite'));}catch(e){}
-const MAXLV=50,expNeed=L=>Math.round(100*Math.pow(L,1.6));
-function lvInfo(xp){let L=1,r=Math.max(0,+xp||0);while(L<MAXLV&&r>=expNeed(L)){r-=expNeed(L);L++;}return{L,r:Math.floor(r),need:L>=MAXLV?0:expNeed(L)};}
-module.exports=function init(DATA){
-  if(!DatabaseSync){console.error('[accounts] node:sqlite unavailable on Node '+process.version+' (need >=22.13). Server accounts DISABLED, game will fall back to browser-only accounts.');return null;}
-  const DBFILE=path.join(DATA,'bosshunter.db');
-  let db;try{fs.mkdirSync(DATA,{recursive:true});db=new DatabaseSync(DBFILE);}catch(e){console.error('[accounts] cannot open database at '+DBFILE+':',e.message);return null;}
-  console.log('[accounts] database ready at '+DBFILE);
-  db.exec(`PRAGMA journal_mode=WAL;PRAGMA foreign_keys=ON;
-  CREATE TABLE IF NOT EXISTS users(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id TEXT NOT NULL UNIQUE,
-    username TEXT NOT NULL UNIQUE COLLATE NOCASE,
-    email TEXT NOT NULL UNIQUE COLLATE NOCASE,
-    pass_salt TEXT NOT NULL,
-    pass_hash TEXT NOT NULL,
-    created_at INTEGER NOT NULL);
-  CREATE TABLE IF NOT EXISTS player_data(
-    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    level INTEGER NOT NULL DEFAULT 1,
-    exp INTEGER NOT NULL DEFAULT 0,
-    money INTEGER NOT NULL DEFAULT 0,
-    wins INTEGER NOT NULL DEFAULT 0,
-    losses INTEGER NOT NULL DEFAULT 0,
-    play_seconds INTEGER NOT NULL DEFAULT 0,
-    last_ping INTEGER NOT NULL DEFAULT 0,
-    last_win INTEGER NOT NULL DEFAULT 0,
-    save_json TEXT,
-    updated_at INTEGER NOT NULL DEFAULT 0);
-  CREATE TABLE IF NOT EXISTS sessions(
-    token_hash TEXT PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    expires_at INTEGER NOT NULL,
-    created_at INTEGER NOT NULL);`);
-  const q={
-    byUser:db.prepare('SELECT * FROM users WHERE username=?'),
-    byEmail:db.prepare('SELECT * FROM users WHERE email=?'),
-    byId:db.prepare('SELECT * FROM users WHERE id=?'),
-    insU:db.prepare('INSERT INTO users(player_id,username,email,pass_salt,pass_hash,created_at) VALUES(?,?,?,?,?,?)'),
-    insP:db.prepare('INSERT INTO player_data(user_id,updated_at) VALUES(?,?)'),
-    insS:db.prepare('INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)'),
-    selS:db.prepare('SELECT user_id,expires_at FROM sessions WHERE token_hash=?'),
-    delS:db.prepare('DELETE FROM sessions WHERE token_hash=?'),
-    purge:db.prepare('DELETE FROM sessions WHERE expires_at<?'),
-    pd:db.prepare('SELECT * FROM player_data WHERE user_id=?'),
-    setSave:db.prepare('UPDATE player_data SET level=?,exp=?,money=?,save_json=?,updated_at=? WHERE user_id=?'),
-    win:db.prepare('UPDATE player_data SET wins=wins+1,last_win=? WHERE user_id=?'),
-    loss:db.prepare('UPDATE player_data SET losses=losses+1 WHERE user_id=?'),
-    ping:db.prepare('UPDATE player_data SET play_seconds=play_seconds+?,last_ping=? WHERE user_id=?'),
+/* MongoDB account system: password hashes (scrypt), hashed server sessions, per-player saves. */
+const crypto = require('crypto');
+
+const MAXLV = 50;
+const expNeed = L => Math.round(100 * Math.pow(L, 1.6));
+function lvInfo(xp) {
+  let L = 1, r = Math.max(0, +xp || 0);
+  while (L < MAXLV && r >= expNeed(L)) { r -= expNeed(L); L++; }
+  return { L, r: Math.floor(r), need: L >= MAXLV ? 0 : expNeed(L) };
+}
+const sha = s => crypto.createHash('sha256').update(s).digest('hex');
+const scrypt = (pw, salt) => new Promise((ok, no) =>
+  crypto.scrypt(pw, salt, 64, { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 },
+    (e, k) => e ? no(e) : ok(k.toString('hex'))));
+
+module.exports = async function initMongo() {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    console.warn('[accounts] MONGODB_URI is not set; server accounts disabled.');
+    return null;
+  }
+
+  const { MongoClient } = require('mongodb');
+  const client = new MongoClient(uri, {
+    serverSelectionTimeoutMS: 10000,
+    maxPoolSize: 10,
+    retryWrites: true
+  });
+  await client.connect();
+  const db = client.db(process.env.MONGODB_DB_NAME || 'BossHunterOnline');
+  const users = db.collection('users');
+  const playerData = db.collection('player_data');
+  const sessions = db.collection('sessions');
+
+  await Promise.all([
+    users.createIndex({ username_lc: 1 }, { unique: true, name: 'username_unique' }),
+    users.createIndex({ email_lc: 1 }, { unique: true, name: 'email_unique' }),
+    users.createIndex({ player_id: 1 }, { unique: true, name: 'player_id_unique' }),
+    playerData.createIndex({ user_id: 1 }, { unique: true, name: 'player_user_unique' }),
+    sessions.createIndex({ token_hash: 1 }, { unique: true, name: 'session_token_unique' }),
+    sessions.createIndex({ expires_at: 1 }, { expireAfterSeconds: 0, name: 'session_ttl' })
+  ]);
+
+  console.log('[accounts] MongoDB connected; database:', db.databaseName);
+
+  const fails = new Map(), hits = new Map();
+  const lockLeft = k => {
+    const f = fails.get(k);
+    return f && f.n >= 5 && f.until > Date.now() ? Math.ceil((f.until - Date.now()) / 1000) : 0;
   };
-  const sha=s=>crypto.createHash('sha256').update(s).digest('hex');
-  const scrypt=(pw,salt)=>new Promise((ok,no)=>crypto.scrypt(pw,salt,64,{N:16384,r:8,p:1,maxmem:64*1024*1024},(e,k)=>e?no(e):ok(k.toString('hex'))));
-  /* rate limiting / brute-force lock (in memory) */
-  const fails=new Map(),hits=new Map();
-  const lockLeft=k=>{const f=fails.get(k);return f&&f.n>=5&&f.until>Date.now()?Math.ceil((f.until-Date.now())/1000):0;};
-  const addFail=k=>{const f=fails.get(k)||{n:0,until:0};if(f.until&&f.until<Date.now()){f.n=0;}f.n++;if(f.n>=5)f.until=Date.now()+10*60e3;fails.set(k,f);};
-  const hitOk=(k,max)=>{const now=Date.now(),a=(hits.get(k)||[]).filter(t=>now-t<10*60e3);a.push(now);hits.set(k,a);return a.length<=max;};
-  setInterval(()=>{const n=Date.now();for(const[k,f]of fails)if(f.until<n&&n-f.until>6e5)fails.delete(k);for(const[k,a]of hits)if(!a.some(t=>n-t<6e5))hits.delete(k);try{q.purge.run(n);}catch(e){}},60e3).unref();
-  const strong=pw=>pw.length>=8&&pw.length<=64&&/[A-Za-z]/.test(pw)&&/\d/.test(pw);
-  const mkSession=(uid,remember)=>{const tok='s_'+crypto.randomBytes(32).toString('hex'),now=Date.now();q.insS.run(sha(tok),uid,now+(remember?30*864e5:864e5),now);return tok;};
-  const profile=u=>{const d=q.pd.get(u.id)||{};return{playerId:u.player_id,username:u.username,email:u.email,createdAt:u.created_at,level:d.level||1,exp:d.exp||0,money:d.money||0,wins:d.wins||0,losses:d.losses||0,playSeconds:d.play_seconds||0};};
-  const authReq=req=>{const t=String(req.headers.authorization||'').replace(/^Bearer /,'');if(!/^s_[0-9a-f]{64}$/.test(t))return null;const s=q.selS.get(sha(t));if(!s||s.expires_at<Date.now())return null;return{uid:+s.user_id,tok:t};};
-  const clean=(o,depth)=>{ /* strip non-finite numbers / bad shapes from a save */
-    if(depth>6)return null;if(typeof o==='number')return Number.isFinite(o)?o:0;if(Array.isArray(o))return o.slice(0,400).map(x=>clean(x,depth+1));
-    if(o&&typeof o==='object'){const r={};let n=0;for(const k of Object.keys(o)){if(k==='__proto__'||k==='constructor'||k==='prototype')continue;if(++n>400)break;r[k]=clean(o[k],depth+1);}return r;}return o;};
-  /* returns true when the request was handled */
-  return async function handle(req,res,u,readBody,jr){
-    const ip=String(req.headers['x-forwarded-for']||req.socket.remoteAddress||'').split(',')[0].trim();
-    if(u==='/api/auth/register'&&req.method==='POST'){
-      if(!hitOk('reg:'+ip,15))return jr(res,429,{err:'rate'}),true;
-      const b=JSON.parse(await readBody(req,4000)),un=String(b.username||'').trim(),em=String(b.email||'').trim().toLowerCase(),pw=String(b.password||'');
-      if(!/^[A-Za-z0-9_฀-๿]{3,20}$/.test(un))return jr(res,400,{err:'username'}),true;
-      if(em.length>100||!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em))return jr(res,400,{err:'email'}),true;
-      if(pw!==String(b.confirm||''))return jr(res,400,{err:'confirm'}),true;
-      if(!strong(pw))return jr(res,400,{err:'weak'}),true;
-      if(q.byUser.get(un))return jr(res,409,{err:'username_taken'}),true;
-      if(q.byEmail.get(em))return jr(res,409,{err:'email_taken'}),true;
-      const salt=crypto.randomBytes(16).toString('hex'),h=await scrypt(pw,salt),pid='BH-'+crypto.randomBytes(5).toString('hex').toUpperCase(),now=Date.now();
-      let uid;try{uid=+q.insU.run(pid,un,em,salt,h,now).lastInsertRowid;q.insP.run(uid,now);}catch(e){return jr(res,409,{err:'taken'}),true;}
-      const tok=mkSession(uid,!!b.remember);return jr(res,200,{token:tok,profile:profile(q.byId.get(uid))}),true;
+  const addFail = k => {
+    const f = fails.get(k) || { n: 0, until: 0 };
+    if (f.until && f.until < Date.now()) f.n = 0;
+    f.n++;
+    if (f.n >= 5) f.until = Date.now() + 10 * 60e3;
+    fails.set(k, f);
+  };
+  const hitOk = (k, max) => {
+    const now = Date.now(), a = (hits.get(k) || []).filter(t => now - t < 10 * 60e3);
+    a.push(now); hits.set(k, a); return a.length <= max;
+  };
+  setInterval(() => {
+    const n = Date.now();
+    for (const [k, f] of fails) if (f.until && f.until < n && n - f.until > 6e5) fails.delete(k);
+    for (const [k, a] of hits) if (!a.some(t => n - t < 6e5)) hits.delete(k);
+  }, 60e3).unref();
+
+  const strong = pw => pw.length >= 8 && pw.length <= 64 && /[A-Za-z]/.test(pw) && /\d/.test(pw);
+  const mkSession = async (uid, remember) => {
+    const tok = 's_' + crypto.randomBytes(32).toString('hex'), now = Date.now();
+    await sessions.insertOne({
+      token_hash: sha(tok), user_id: uid,
+      expires_at: new Date(now + (remember ? 30 : 1) * 864e5),
+      created_at: new Date(now)
+    });
+    return tok;
+  };
+  const profile = async u => {
+    const d = await playerData.findOne({ user_id: u._id }) || {};
+    return {
+      playerId: u.player_id, username: u.username, email: u.email,
+      createdAt: u.created_at, level: d.level || 1, exp: d.exp || 0,
+      money: d.money || 0, wins: d.wins || 0, losses: d.losses || 0,
+      playSeconds: d.play_seconds || 0
+    };
+  };
+  const authReq = async req => {
+    const t = String(req.headers.authorization || '').replace(/^Bearer /, '');
+    if (!/^s_[0-9a-f]{64}$/.test(t)) return null;
+    const s = await sessions.findOne({ token_hash: sha(t), expires_at: { $gt: new Date() } });
+    return s ? { uid: s.user_id, tok: t } : null;
+  };
+  const clean = (o, depth = 0) => {
+    if (depth > 6) return null;
+    if (typeof o === 'number') return Number.isFinite(o) ? o : 0;
+    if (Array.isArray(o)) return o.slice(0, 400).map(x => clean(x, depth + 1));
+    if (o && typeof o === 'object') {
+      const r = {}; let n = 0;
+      for (const k of Object.keys(o)) {
+        if (['__proto__', 'constructor', 'prototype'].includes(k)) continue;
+        if (++n > 400) break;
+        r[k] = clean(o[k], depth + 1);
+      }
+      return r;
     }
-    if(u==='/api/auth/login'&&req.method==='POST'){
-      const b=JSON.parse(await readBody(req,3000)),id=String(b.id||'').trim().slice(0,100),pw=String(b.password||'').slice(0,100);
-      const k1='ip:'+ip,k2='id:'+id.toLowerCase();
-      const L=Math.max(lockLeft(k1),lockLeft(k2));if(L)return jr(res,429,{err:'locked',wait:L}),true;
-      const row=id.includes('@')?q.byEmail.get(id.toLowerCase()):q.byUser.get(id);
-      let good=false;if(row){const h=await scrypt(pw,row.pass_salt);good=h.length===row.pass_hash.length&&crypto.timingSafeEqual(Buffer.from(h),Buffer.from(row.pass_hash));}else await scrypt(pw,'0000000000000000');
-      if(!good){addFail(k1);addFail(k2);return jr(res,401,{err:'auth'}),true;}
-      fails.delete(k1);fails.delete(k2);
-      return jr(res,200,{token:mkSession(row.id,!!b.remember),profile:profile(row)}),true;
+    return o;
+  };
+
+  return async function handle(req, res, u, readBody, jr) {
+    const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+
+    if (u === '/api/auth/register' && req.method === 'POST') {
+      if (!hitOk('reg:' + ip, 15)) { jr(res, 429, { err: 'rate' }); return true; }
+      const b = JSON.parse(await readBody(req, 4000));
+      const un = String(b.username || '').trim();
+      const em = String(b.email || '').trim().toLowerCase();
+      const pw = String(b.password || '');
+      if (!/^[A-Za-z0-9_\u0E00-\u0E7F]{3,20}$/.test(un)) { jr(res, 400, { err: 'username' }); return true; }
+      if (em.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)) { jr(res, 400, { err: 'email' }); return true; }
+      if (pw !== String(b.confirm || '')) { jr(res, 400, { err: 'confirm' }); return true; }
+      if (!strong(pw)) { jr(res, 400, { err: 'weak' }); return true; }
+      const username_lc = un.toLowerCase(), email_lc = em;
+      if (await users.findOne({ $or: [{ username_lc }, { email_lc }] })) {
+        const sameUser = await users.findOne({ username_lc });
+        jr(res, 409, { err: sameUser ? 'username_taken' : 'email_taken' }); return true;
+      }
+      const salt = crypto.randomBytes(16).toString('hex');
+      const pass_hash = await scrypt(pw, salt);
+      const now = Date.now();
+      const user = {
+        player_id: 'BH-' + crypto.randomBytes(5).toString('hex').toUpperCase(),
+        username: un, username_lc, email: em, email_lc,
+        pass_salt: salt, pass_hash, created_at: now
+      };
+      try {
+        const ins = await users.insertOne(user);
+        user._id = ins.insertedId;
+        await playerData.insertOne({ user_id: user._id, level: 1, exp: 0, money: 0, wins: 0, losses: 0, play_seconds: 0, last_ping: 0, last_win: 0, save_json: null, updated_at: now });
+      } catch (e) {
+        if (e && e.code === 11000) { jr(res, 409, { err: 'taken' }); return true; }
+        throw e;
+      }
+      const tok = await mkSession(user._id, !!b.remember);
+      jr(res, 200, { token: tok, profile: await profile(user) }); return true;
     }
-    if(!u.startsWith('/api/auth/')&&u!=='/api/save'&&u!=='/api/event'&&u!=='/api/ping'&&u!=='/api/me')return false;
-    const a=authReq(req);if(!a)return false; /* legacy (Google) tokens fall through to the old handler */
-    const user=q.byId.get(a.uid);if(!user)return jr(res,401,{err:'auth'}),true;
-    if(u==='/api/auth/logout'&&req.method==='POST'){q.delS.run(sha(a.tok));return jr(res,200,{ok:true}),true;}
-    if(u==='/api/auth/profile'||u==='/api/me')return jr(res,200,{ok:true,profile:profile(user)}),true;
-    if(u==='/api/save'&&req.method==='GET'){const d=q.pd.get(a.uid);let s=null;try{s=d&&d.save_json?JSON.parse(d.save_json):null;}catch(e){}return jr(res,200,{save:s,profile:profile(user)}),true;}
-    if(u==='/api/save'&&req.method==='PUT'){
-      if(!hitOk('sv:'+a.uid,120))return jr(res,429,{err:'rate'}),true;
-      const o=JSON.parse(await readBody(req,300000));if(!o||typeof o.save!=='object'||!o.save||Array.isArray(o.save))return jr(res,400,{err:'bad'}),true;
-      const s=clean(o.save,0),xp=Math.min(Math.max(0,s.xp||0),1e12),I=lvInfo(xp),money=Math.min(Math.max(0,Math.floor(s.money||0)),1e13);
-      const js=JSON.stringify(s);if(js.length>250000)return jr(res,413,{err:'big'}),true;
-      q.setSave.run(I.L,Math.floor(I.r),money,js,Date.now(),a.uid);return jr(res,200,{ok:true,profile:profile(user)}),true;
+
+    if (u === '/api/auth/login' && req.method === 'POST') {
+      const b = JSON.parse(await readBody(req, 3000));
+      const id = String(b.id || '').trim().slice(0, 100), pw = String(b.password || '').slice(0, 100);
+      const k1 = 'ip:' + ip, k2 = 'id:' + id.toLowerCase();
+      const L = Math.max(lockLeft(k1), lockLeft(k2));
+      if (L) { jr(res, 429, { err: 'locked', wait: L }); return true; }
+      const lc = id.toLowerCase();
+      const row = await users.findOne(id.includes('@') ? { email_lc: lc } : { username_lc: lc });
+      let good = false;
+      if (row) {
+        const h = await scrypt(pw, row.pass_salt);
+        good = h.length === row.pass_hash.length && crypto.timingSafeEqual(Buffer.from(h), Buffer.from(row.pass_hash));
+      } else await scrypt(pw, '0000000000000000');
+      if (!good) { addFail(k1); addFail(k2); jr(res, 401, { err: 'auth' }); return true; }
+      fails.delete(k1); fails.delete(k2);
+      jr(res, 200, { token: await mkSession(row._id, !!b.remember), profile: await profile(row) }); return true;
     }
-    if(u==='/api/event'&&req.method==='POST'){ /* wins / losses are counted by the server only */
-      const b=JSON.parse(await readBody(req,500)),d=q.pd.get(a.uid),now=Date.now();
-      if(b.type==='win'){if(now-(d.last_win||0)<20e3)return jr(res,429,{err:'rate'}),true;q.win.run(now,a.uid);}
-      else if(b.type==='loss'){if(!hitOk('ls:'+a.uid,200))return jr(res,429,{err:'rate'}),true;q.loss.run(a.uid);}
-      else return jr(res,400,{err:'bad'}),true;
-      return jr(res,200,{profile:profile(user)}),true;
+
+    const accountPaths = ['/api/auth/logout', '/api/auth/profile', '/api/me', '/api/save', '/api/event', '/api/ping'];
+    if (!accountPaths.includes(u)) return false;
+    const bearer = String(req.headers.authorization || '').replace(/^Bearer /, '');
+    // Let the legacy Google-token handler in server.js process non-MongoDB tokens.
+    if (!bearer.startsWith('s_')) return false;
+    const a = await authReq(req);
+    if (!a) { jr(res, 401, { err: 'auth' }); return true; }
+    const user = await users.findOne({ _id: a.uid });
+    if (!user) { jr(res, 401, { err: 'auth' }); return true; }
+
+    if (u === '/api/auth/logout' && req.method === 'POST') {
+      await sessions.deleteOne({ token_hash: sha(a.tok) });
+      jr(res, 200, { ok: true }); return true;
     }
-    if(u==='/api/ping'&&req.method==='POST'){ /* play time is measured by the server clock */
-      const d=q.pd.get(a.uid),now=Date.now(),dt=d.last_ping?Math.min(90,Math.max(0,Math.floor((now-d.last_ping)/1000))):0;
-      q.ping.run(dt,now,a.uid);return jr(res,200,{ok:true}),true;
+    if (u === '/api/auth/profile' || u === '/api/me') {
+      jr(res, 200, { ok: true, profile: await profile(user) }); return true;
+    }
+    if (u === '/api/save' && req.method === 'GET') {
+      const d = await playerData.findOne({ user_id: a.uid });
+      let save = null;
+      try { save = d && d.save_json ? JSON.parse(d.save_json) : null; } catch (_) {}
+      jr(res, 200, { save, profile: await profile(user) }); return true;
+    }
+    if (u === '/api/save' && req.method === 'PUT') {
+      if (!hitOk('sv:' + String(a.uid), 120)) { jr(res, 429, { err: 'rate' }); return true; }
+      const o = JSON.parse(await readBody(req, 300000));
+      if (!o || typeof o.save !== 'object' || !o.save || Array.isArray(o.save)) { jr(res, 400, { err: 'bad' }); return true; }
+      const save = clean(o.save);
+      const xp = Math.min(Math.max(0, save.xp || 0), 1e12), I = lvInfo(xp);
+      const money = Math.min(Math.max(0, Math.floor(save.money || 0)), 1e13);
+      const js = JSON.stringify(save);
+      if (js.length > 250000) { jr(res, 413, { err: 'big' }); return true; }
+      await playerData.updateOne({ user_id: a.uid }, {
+        $set: { level: I.L, exp: Math.floor(I.r), money, save_json: js, updated_at: Date.now() }
+      }, { upsert: true });
+      jr(res, 200, { ok: true, profile: await profile(user) }); return true;
+    }
+    if (u === '/api/event' && req.method === 'POST') {
+      const b = JSON.parse(await readBody(req, 500)), d = await playerData.findOne({ user_id: a.uid }) || {}, now = Date.now();
+      if (b.type === 'win') {
+        if (now - (d.last_win || 0) < 20000) { jr(res, 429, { err: 'rate' }); return true; }
+        await playerData.updateOne({ user_id: a.uid }, { $inc: { wins: 1 }, $set: { last_win: now } }, { upsert: true });
+      } else if (b.type === 'loss') {
+        if (!hitOk('ls:' + String(a.uid), 200)) { jr(res, 429, { err: 'rate' }); return true; }
+        await playerData.updateOne({ user_id: a.uid }, { $inc: { losses: 1 } }, { upsert: true });
+      } else { jr(res, 400, { err: 'bad' }); return true; }
+      jr(res, 200, { profile: await profile(user) }); return true;
+    }
+    if (u === '/api/ping' && req.method === 'POST') {
+      const d = await playerData.findOne({ user_id: a.uid }) || {}, now = Date.now();
+      const dt = d.last_ping ? Math.min(90, Math.max(0, Math.floor((now - d.last_ping) / 1000))) : 0;
+      await playerData.updateOne({ user_id: a.uid }, { $inc: { play_seconds: dt }, $set: { last_ping: now } }, { upsert: true });
+      jr(res, 200, { ok: true }); return true;
     }
     return false;
   };

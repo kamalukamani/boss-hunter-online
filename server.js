@@ -1,5 +1,5 @@
 'use strict';
-/* BOSS HUNTER 3D: static file + WebSocket room relay. Zero dependencies, Node 18+. */
+/* BOSS HUNTER ONLINE: static file + WebSocket room relay + optional MongoDB accounts. */
 const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto'),zlib=require('zlib');
 const PORT=+process.env.PORT||3000;
 const MAX_ROOM=16,MAX_CONN=3000,MAX_MSG=16384,MAX_PRES=8192;
@@ -19,11 +19,15 @@ const tokOf=req=>chkTok((req.headers.authorization||'').replace(/^Bearer /,''));
 const gVerify=cred=>new Promise((ok,no)=>{https.get('https://oauth2.googleapis.com/tokeninfo?id_token='+encodeURIComponent(cred),r=>{let d='';r.on('data',c=>{d+=c;if(d.length>20000)r.destroy();});r.on('end',()=>{try{const j=JSON.parse(d);if(r.statusCode!==200||j.aud!==GID||!/^\d{5,30}$/.test(j.sub||'')||+j.exp*1000<Date.now())return no(new Error('bad'));ok(j);}catch(e){no(e);}});}).on('error',no);});
 const readBody=(req,max)=>new Promise((ok,no)=>{let n=0;const a=[];req.on('data',c=>{n+=c.length;if(n>max){no(new Error('big'));req.destroy();}else a.push(c);});req.on('end',()=>ok(Buffer.concat(a).toString()));req.on('error',no);});
 const jr=(res,code,o)=>{res.writeHead(code,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(o));};
-const ACCT=require('./accounts.js')(DATA);
-if(!process.env.DATA_DIR)console.warn('[server] DATA_DIR is not set: accounts are stored in '+DATA+' which is wiped on every Render restart/deploy. Attach a Persistent Disk and set DATA_DIR=/data.');
-console.log('[server] data dir: '+DATA+' | server accounts: '+(ACCT?'ON':'OFF'));
+let ACCT=null;
+const ACCT_READY=require('./accounts.js')().then(a=>{ACCT=a;return a;}).catch(e=>{
+  console.error('[accounts] MongoDB connection/setup failed:',e.message);
+  return null;
+});
+if(!process.env.DATA_DIR)console.warn('[server] DATA_DIR is not set: legacy Google-login saves use temporary local storage.');
 async function api(req,res,u){
   try{
+    await ACCT_READY;
     if(ACCT&&u!=='/api/config'&&await ACCT(req,res,u,readBody,jr))return;
     if(u==='/api/config')return jr(res,200,{gid:GID,acct:!!ACCT,db:!!ACCT});
     if(u==='/api/login'&&req.method==='POST'){if(!GID)return jr(res,503,{err:'no_google'});const b=JSON.parse(await readBody(req,8000)),j=await gVerify(b.credential);return jr(res,200,{token:mkTok(j.sub),name:String(j.name||j.given_name||'Hunter').slice(0,40),pic:String(j.picture||'').slice(0,300)});}
@@ -45,7 +49,7 @@ const server=http.createServer((req,res)=>{
     res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache','X-Content-Type-Options':'nosniff',...(gz?{'Content-Encoding':'gzip'}:{})});
     return res.end(req.method==='HEAD'?undefined:(gz?htmlGz:html));
   }
-  if(u==='/healthz'){res.writeHead(200,{'Content-Type':'application/json'});return res.end(JSON.stringify({ok:true,conns,rooms:rooms.size,acct:!!ACCT,persistent:!!process.env.DATA_DIR}));}
+  if(u==='/healthz'){ACCT_READY.then(()=>{res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({ok:true,conns,rooms:rooms.size,acct:!!ACCT,persistent:!!process.env.DATA_DIR}));});return;}
   if(u==='/favicon.ico'){res.writeHead(204);return res.end();}
   res.writeHead(404,{'Content-Type':'text/plain'});res.end('not found');
 });
