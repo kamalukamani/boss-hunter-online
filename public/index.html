@@ -288,7 +288,7 @@ body.touch.fight #touch{display:block}
   <section id="sTitle" class="screen gut">
     <div class="logo"><span>FIRST PERSON BOSS FIGHTS</span>BOSS<br>HUNTER <b>3D</b></div>
     <p class="tagline">ล่าบอสยักษ์ 5 ตัว เก็บเงินรางวัล ซื้อปืนใหม่ อัปเกรดอาวุธ แล้วท้าทายบอสที่โหดขึ้นเรื่อย ๆ</p>
-    <div class="ctaCol"><button class="btn cta" id="btnContinue">เริ่มเกม</button><div class="ctaSub"><button class="btn sec" id="btnNew">เริ่มเกมใหม่</button><button class="btn sec" id="btnControls">ตั้งค่า / ปุ่มควบคุม</button></div></div>
+    <div class="ctaCol"><button class="btn cta" id="btnContinue">เริ่มเกม</button><div class="ctaSub"><button class="btn sec" id="btnNew">เริ่มเกมใหม่</button><button class="btn sec" id="btnLogin">ล็อคอิน</button><button class="btn sec" id="btnControls">ตั้งค่า / ปุ่มควบคุม</button></div></div>
     <p style="margin-top:14px;font-size:11px;color:var(--muted);max-width:560px">โมเดล SOUL OF CINDER: “Soul Of Cinder - Dark Souls 3 Boss Tilt Brush” โดย vrhuman (Sketchfab) · CC-BY-4.0 · ดัดแปลง/ลดความละเอียดเพื่อใช้ในเกม<br>โมเดล ARTORIAS &amp; SIF: “Knight Artorias and Great Grey Wolf Sif” โดย 9S (Sketchfab) · CC-BY-4.0 · แยกชิ้นส่วนกระดูกและปรับท่าทางเพื่อใช้ในเกม</p>
   </section>
 
@@ -2652,6 +2652,7 @@ function syncBoss(b){
 /* ---------- death ---------- */
 function bossDie(b){
   if(b.st==='dying')return;
+  try{accEvent('win');}catch(e){}
   if(NET.on&&NET.host)netEvent('die');
   b.st='dying';b.deathT=0;b.atk=null;hideTele();b.vis=1;b.jump=null;
   for(let i=PR.length-1;i>=0;i--)explodeProj(PR[i],i,true);
@@ -2825,6 +2826,7 @@ function goLobby(tab){
   showLobby(tab||'stages');
 }
 function playerDie(){
+  try{accEvent('loss');}catch(e){}
   if(NET.on){P.dead=true;P.deadT=0;P.respawn=14;IN.fire=false;IN.ads=false;return;}
   P.dead=true;P.deadT=0;mode='ending';IN.fire=false;IN.ads=false;unlockPointer();suppressPause=true;
   setTimeout(()=>{if(mode==='ending'&&P.dead){showLose();}},1900);
@@ -3463,54 +3465,210 @@ function renderSkills(body){
   const rs=document.createElement('button');rs.className='btn';rs.textContent='รีเซ็ตสกิลทั้งหมด (คืนแต้มฟรี)';rs.style.margin='8px 0';rs.onclick=()=>{save.sk={};writeSave();sfxClick();renderLobby();};body.appendChild(rs);
   showInfo('gun');
 }
-/* =====================  GOOGLE ACCOUNT + CLOUD SAVE  ===================== */
-const ACC={tok:'',name:'',pic:'',gid:'',on:false};
-try{ACC.tok=localStorage.getItem('bh_tok')||'';ACC.name=localStorage.getItem('bh_name')||'';ACC.pic=localStorage.getItem('bh_pic')||'';}catch(e){}
+/* =====================  ACCOUNTS: register / login / profile / cloud save  =====================
+   Server mode (Render): SQLite + scrypt + server sessions. Local mode (no server, e.g. preview): accounts kept in this browser. */
+const ACC={tok:'',name:'',pic:'',gid:'',on:false,local:false,prof:null,rem:true};
+const lsG=k=>{try{return localStorage.getItem(k);}catch(e){return null;}},lsS=(k,v)=>{try{localStorage.setItem(k,v);}catch(e){}},lsD=k=>{try{localStorage.removeItem(k);}catch(e){}};
+const ssG=k=>{try{return sessionStorage.getItem(k);}catch(e){return null;}},ssS=(k,v)=>{try{sessionStorage.setItem(k,v);}catch(e){}},ssD=k=>{try{sessionStorage.removeItem(k);}catch(e){}};
+{const t=lsG('bh_tok'),s=ssG('bh_tok');ACC.tok=t||s||'';ACC.rem=!!t||!s;ACC.name=lsG('bh_name')||ssG('bh_name')||'';}
 const accScore=s=>s?((s.xp||0)+(s.money||0)+Object.keys(s.owned||{}).length*1000+Object.keys(s.defeated||{}).length*5000):-1;
 const accHdr=()=>({'Authorization':'Bearer '+ACC.tok,'Content-Type':'application/json'});
-let _accT=0;
-function accPush(){if(!ACC.on||!ACC.tok)return;clearTimeout(_accT);_accT=setTimeout(()=>{fetch('/api/save',{method:'PUT',headers:accHdr(),body:JSON.stringify({save})}).catch(()=>{});},2500);}
-function accRender(){
-  const box=$('acct');if(!box)return;box.innerHTML='';
-  if(!ACC.gid)return;
-  if(ACC.tok&&ACC.name){
-    const d=document.createElement('div');d.style.cssText='display:flex;align-items:center;gap:6px;justify-content:flex-end;font:600 12px var(--display);color:var(--text)';
-    if(ACC.pic){const im=document.createElement('img');im.src=ACC.pic;im.referrerPolicy='no-referrer';im.style.cssText='width:22px;height:22px;border-radius:50%';d.appendChild(im);}
-    const n=document.createElement('span');n.textContent=ACC.name;n.style.cssText='display:inline;letter-spacing:.04em;color:var(--text)';d.appendChild(n);
-    const b=document.createElement('button');b.className='btn';b.textContent='ออกจากระบบ';b.style.cssText='padding:3px 8px;font-size:11px';b.onclick=accLogout;d.appendChild(b);box.appendChild(d);
-  }else{
-    const g=document.createElement('div');g.id='gbtn';box.appendChild(g);
-    try{if(window.google&&google.accounts&&google.accounts.id)google.accounts.id.renderButton(g,{theme:'filled_black',size:'medium',text:'signin_with',shape:'rectangular'});}catch(e){}
-  }
+const ACC_MSG={username:'ชื่อผู้ใช้ 3-20 ตัว (อังกฤษ/ไทย/ตัวเลข/_)',email:'รูปแบบอีเมลไม่ถูกต้อง',confirm:'รหัสผ่านและยืนยันรหัสผ่านไม่ตรงกัน',weak:'รหัสผ่านต้องมีอย่างน้อย 8 ตัว และมีทั้งตัวอักษรกับตัวเลข',username_taken:'ชื่อผู้ใช้นี้ถูกใช้แล้ว',email_taken:'อีเมลนี้ถูกใช้แล้ว',taken:'ชื่อผู้ใช้หรืออีเมลนี้ถูกใช้แล้ว',auth:'ชื่อผู้ใช้/อีเมล หรือรหัสผ่านไม่ถูกต้อง',locked:'ใส่ผิดหลายครั้ง ถูกล็อคชั่วคราว ลองใหม่ภายหลัง',rate:'ลองถี่เกินไป รอสักครู่แล้วลองใหม่',net:'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองใหม่',bad:'ข้อมูลไม่ถูกต้อง'};
+const okUser=u=>/^[A-Za-z0-9_฀-๿]{3,20}$/.test(u),okMail=e=>e.length<=100&&/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e),okPw=p=>p.length>=8&&p.length<=64&&/[A-Za-z]/.test(p)&&/\d/.test(p);
+const pwScore=p=>{let s=0;if(p.length>=8)s++;if(p.length>=12)s++;if(/[A-Za-z]/.test(p)&&/\d/.test(p))s++;if(/[A-Z]/.test(p)&&/[a-z]/.test(p))s++;if(/[^A-Za-z0-9]/.test(p))s++;return Math.min(4,s);};
+async function sha(s){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');}catch(e){let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return 'x'+h;}}
+async function accApi(path,method,body){
+  try{const r=await fetch(path,{method,headers:ACC.tok?accHdr():{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,keepalive:method!=='GET'&&path==='/api/save'});
+    const j=await r.json().catch(()=>({}));return{ok:r.ok,status:r.status,j};}catch(e){return{ok:false,net:true,status:0,j:{err:'net'}};}
 }
-function accLogout(){ACC.tok='';ACC.name='';ACC.pic='';try{['bh_tok','bh_name','bh_pic'].forEach(k=>localStorage.removeItem(k));}catch(e){}accRender();toast('ออกจากระบบแล้ว');}
+/* ---- local (browser-only) accounts ---- */
+const locUsers=()=>{try{return JSON.parse(lsG('bh_users2')||'{}');}catch(e){return{};}};
+async function locAuth(kind,b){
+  const us=locUsers();
+  if(kind==='register'){const un=b.username.trim(),em=b.email.trim().toLowerCase();
+    if(Object.values(us).some(u=>u.name.toLowerCase()===un.toLowerCase()))return{err:'username_taken'};if(Object.values(us).some(u=>u.email===em))return{err:'email_taken'};
+    const salt=Math.random().toString(36).slice(2)+Date.now().toString(36),k='u'+(await sha(un.toLowerCase())).slice(0,10);
+    us[k]={name:un,email:em,salt,h:await sha(salt+':'+b.password),pid:'BH-L'+(await sha(k+salt)).slice(0,7).toUpperCase(),created:Date.now()};lsS('bh_users2',JSON.stringify(us));return{key:k,rec:us[k]};}
+  const id=b.id.trim().toLowerCase(),k=Object.keys(us).find(x=>us[x].name.toLowerCase()===id||us[x].email===id);
+  if(!k||us[k].h!==await sha(us[k].salt+':'+b.password))return{err:'auth'};return{key:k,rec:us[k]};
+}
+function locProfile(){const us=locUsers(),r=us[ACC.tok.slice(2)]||{};const I=typeof lvInfo==='function'?lvInfo(save.xp):{L:1,r:0},st=save.st||{};return{playerId:r.pid||'-',username:ACC.name,email:r.email||'-',createdAt:r.created||0,level:I.L,exp:Math.floor(I.r),money:save.money||0,wins:st.w||0,losses:st.l||0,playSeconds:st.pt||0};}
+/* ---- save sync ---- */
+let _accT=0;
+const accCan=()=>ACC.on&&ACC.tok;
+function accPushNow(){
+  if(!accCan())return;
+  if(ACC.local){lsS('bh_save_'+ACC.tok,JSON.stringify(save));return;}
+  if(ACC.gid&&!ACC.tok.startsWith('s_')){try{fetch('/api/save',{method:'PUT',headers:accHdr(),body:JSON.stringify({save}),keepalive:true}).catch(()=>{});}catch(e){}return;}
+  try{fetch('/api/save',{method:'PUT',headers:accHdr(),body:JSON.stringify({save}),keepalive:true}).then(r=>r.json()).then(j=>{if(j&&j.profile){ACC.prof=j.profile;}}).catch(()=>{});}catch(e){}
+}
+function accPush(){if(!accCan())return;clearTimeout(_accT);_accT=setTimeout(accPushNow,ACC.local?600:2500);}
+function accEvent(type){
+  if(!accCan())return;
+  if(ACC.local){save.st=save.st||{w:0,l:0,pt:0};if(type==='win')save.st.w++;else if(type==='loss')save.st.l++;return;}
+  accApi('/api/event','POST',{type}).then(r=>{if(r.ok&&r.j.profile)ACC.prof=r.j.profile;});
+}
+setInterval(()=>{if(!accCan()||document.hidden)return;if(ACC.local){save.st=save.st||{w:0,l:0,pt:0};save.st.pt+=30;}else if(ACC.tok.startsWith('s_'))accApi('/api/ping','POST',{});},30000);
+addEventListener('pagehide',()=>{try{if(typeof writeSave==='function')writeSave();}catch(e){}accPushNow();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)accPushNow();});
 async function accPull(){
   try{
-    const r=await fetch('/api/save',{headers:accHdr()});if(r.status===401){accLogout();return;}
-    const j=await r.json(),cloud=j&&j.save;
-    if(cloud&&accScore(cloud)>accScore(save)){save=Object.assign(defSave(),cloud);try{writeSave();}catch(e){}if(typeof renderLobby==='function')try{renderLobby();}catch(e){}toast('โหลดเซฟจากบัญชี Google แล้ว');}
-    else{accPush();}
+    let cloud;
+    if(ACC.local){try{cloud=JSON.parse(lsG('bh_save_'+ACC.tok)||'null');}catch(e){cloud=null;}ACC.prof=locProfile();}
+    else{const r=await accApi('/api/save','GET');if(r.status===401){accLogout(true);return;}if(r.net){toast(ACC_MSG.net);return;}cloud=r.j.save;if(r.j.profile)ACC.prof=r.j.profile;}
+    const who=ACC.prof&&ACC.prof.playerId||ACC.name,last=lsG('bh_last'),other=last&&last!==who;lsS('bh_last',who);
+    if(other){save=cloud?Object.assign(defSave(),cloud):defSave();if(!cloud)save.nick=ACC.name.slice(0,14);try{writeSave();}catch(e){}toast('โหลดเซฟของ '+ACC.name);accPush();}
+    else if(cloud&&accScore(cloud)>accScore(save)){save=Object.assign(defSave(),cloud);try{writeSave();}catch(e){}toast('โหลดเซฟจากบัญชีแล้ว');}
+    else accPush();
+    if(typeof renderLobby==='function')try{renderLobby();}catch(e){}
+    accRender();
   }catch(e){}
 }
+function accStore(tok,name,rem){
+  ACC.tok=tok;ACC.name=name;ACC.rem=rem;['bh_tok','bh_name'].forEach(lsD);['bh_tok','bh_name'].forEach(ssD);
+  (rem?lsS:ssS)('bh_tok',tok);(rem?lsS:ssS)('bh_name',name);
+}
+async function accLogout(silent){
+  if(ACC.tok&&!silent){try{if(typeof writeSave==='function')writeSave();}catch(e){}accPushNow();if(!ACC.local&&ACC.tok.startsWith('s_'))try{await fetch('/api/auth/logout',{method:'POST',headers:accHdr()});}catch(e){}}
+  ACC.tok='';ACC.name='';ACC.prof=null;['bh_tok','bh_name'].forEach(lsD);['bh_tok','bh_name'].forEach(ssD);accRender();if(!silent)toast('ออกจากระบบแล้ว');
+}
+/* ---- UI ---- */
+function accCss(){
+  if($('accCss'))return;const st=document.createElement('style');st.id='accCss';
+  st.textContent=`#toast{z-index:100000!important}
+#loginGate{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;padding:14px;overflow:auto;background:radial-gradient(ellipse at 20% 15%,#1a2a3d 0%,#070b11 60%),#05080d;font-family:var(--display,sans-serif);color:#e8eef5}
+#loginGate .gc{width:min(410px,100%);background:linear-gradient(180deg,#0e1620,#090e14);border:1px solid #27384a;border-top:3px solid #ffb02e;padding:24px 22px 20px;box-shadow:0 20px 60px #000c;clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,0 100%)}
+#loginGate .lg{font:700 30px var(--display);letter-spacing:.07em;line-height:1}#loginGate .lg b{color:#ffb02e}
+#loginGate .sb{font-size:12px;color:#8fa3b8;margin:5px 0 16px;letter-spacing:.04em}
+#loginGate h3{font:700 16px var(--display);letter-spacing:.1em;margin:0 0 10px;color:#ffb02e}
+#loginGate label{display:block;font-size:11px;color:#8fa3b8;margin:9px 0 3px;letter-spacing:.06em}
+#loginGate .fw{position:relative}
+#loginGate input[type=text],#loginGate input[type=password],#loginGate input[type=email]{width:100%;box-sizing:border-box;padding:11px 44px 11px 11px;background:#0b1118;border:1px solid #2a3a4c;color:#fff;font:14px var(--display,sans-serif);outline:none}
+#loginGate input:focus{border-color:#ffb02e;box-shadow:0 0 0 2px #ffb02e33}
+#loginGate .eye{position:absolute;right:4px;top:3px;bottom:3px;padding:0 9px;background:none;border:0;color:#8fa3b8;font-size:11px;cursor:pointer}
+#loginGate .mt{height:5px;background:#16212d;margin-top:6px}#loginGate .mt i{display:block;height:100%;width:0;background:#e5484d;transition:width .2s,background .2s}
+#loginGate .mh{font-size:11px;color:#7d90a5;margin-top:3px;min-height:14px}
+#loginGate .rm{display:flex;align-items:center;gap:7px;font-size:12px;color:#b9c7d6;margin:12px 0 4px;cursor:pointer}
+#loginGate .err{min-height:18px;margin:10px 0 2px;font-size:12.5px;color:#ff6b72;line-height:1.35}
+#loginGate .row{display:flex;gap:9px;margin-top:8px}
+#loginGate .gb{flex:1;padding:12px 8px;border:1px solid #33475c;background:#122030;color:#e8eef5;font:700 13px var(--display,sans-serif);letter-spacing:.08em;cursor:pointer}
+#loginGate .gb.pri{background:#ffb02e;border-color:#ffb02e;color:#1a1000}
+#loginGate .gb:disabled{opacity:.5;cursor:wait}
+#loginGate .lk{background:none;border:0;color:#8fa3b8;font-size:12px;text-decoration:underline;cursor:pointer;margin-top:12px;padding:0}
+#profMod{position:fixed;inset:0;z-index:99998;display:none;align-items:center;justify-content:center;background:#000a;padding:14px;font-family:var(--display,sans-serif);color:#e8eef5}
+#profMod .pc{width:min(400px,100%);background:#0b1118;border:1px solid #27384a;border-top:3px solid #ffb02e;padding:20px}
+#profMod .pr{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #1a2634;font-size:13px}#profMod .pr span{color:#8fa3b8}#profMod .pr b{text-align:right;word-break:break-all}
+#welcome{font:600 14px var(--display);color:#cfe2f5;margin:0 0 10px;letter-spacing:.05em}#welcome b{color:#ffb02e}`;
+  document.head.appendChild(st);
+}
+function accGate(){
+  accCss();let g=$('loginGate');
+  if(!ACC.on){if(g)g.style.display='none';return;}
+  if(!g){
+    g=document.createElement('div');g.id='loginGate';
+    g.innerHTML=`<div class="gc">
+<div class="lg">BOSS HUNTER <b>3D</b></div><div class="sb">ล็อคอินเพื่อเริ่มเล่น · เซฟเกมผูกกับบัญชีของคุณ<span id="gLocal"></span></div>
+<div id="pLogin"><h3>เข้าสู่ระบบ</h3>
+<label>ชื่อผู้ใช้ หรือ อีเมล</label><div class="fw"><input id="lgId" type="text" autocomplete="username" maxlength="100"></div>
+<label>รหัสผ่าน</label><div class="fw"><input id="lgPw" type="password" autocomplete="current-password" maxlength="64"><button class="eye" type="button" data-eye="lgPw">แสดง</button></div>
+<label class="rm"><input id="lgRem" type="checkbox" checked> จดจำการเข้าสู่ระบบ</label>
+<div class="err" id="lgErr"></div>
+<div class="row"><button class="gb pri" id="lgGo">LOGIN</button><button class="gb" id="lgToReg">REGISTER</button></div>
+<div id="gbtn2" style="margin-top:12px;display:flex;justify-content:center"></div></div>
+<div id="pReg" style="display:none"><h3>สมัครสมาชิก</h3>
+<label>ชื่อผู้ใช้</label><div class="fw"><input id="rgUser" type="text" autocomplete="username" maxlength="20"></div>
+<label>อีเมล</label><div class="fw"><input id="rgMail" type="email" autocomplete="email" maxlength="100"></div>
+<label>รหัสผ่าน</label><div class="fw"><input id="rgPw" type="password" autocomplete="new-password" maxlength="64"><button class="eye" type="button" data-eye="rgPw">แสดง</button></div>
+<div class="mt"><i id="rgBar"></i></div><div class="mh" id="rgHint">อย่างน้อย 8 ตัว มีตัวอักษรและตัวเลข</div>
+<label>ยืนยันรหัสผ่าน</label><div class="fw"><input id="rgPw2" type="password" autocomplete="new-password" maxlength="64"><button class="eye" type="button" data-eye="rgPw2">แสดง</button></div>
+<div class="err" id="rgErr"></div>
+<div class="row"><button class="gb pri" id="rgGo">CREATE ACCOUNT</button><button class="gb" id="rgBack">BACK TO LOGIN</button></div></div></div>`;
+    document.body.appendChild(g);
+    g.querySelectorAll('input').forEach(i=>['keydown','keyup','keypress'].forEach(e=>i.addEventListener(e,ev=>ev.stopPropagation())));
+    g.querySelectorAll('.eye').forEach(b=>b.onclick=()=>{const i=$(b.dataset.eye);const s=i.type==='password';i.type=s?'text':'password';b.textContent=s?'ซ่อน':'แสดง';});
+    const show=p=>{$('pLogin').style.display=p==='l'?'block':'none';$('pReg').style.display=p==='r'?'block':'none';$('lgErr').textContent=$('rgErr').textContent='';};
+    $('lgToReg').onclick=()=>show('r');$('rgBack').onclick=()=>show('l');
+    $('rgPw').addEventListener('input',()=>{const p=$('rgPw').value,s=pwScore(p),bar=$('rgBar');bar.style.width=(p?(s+1)*20:0)+'%';bar.style.background=['#e5484d','#e5484d','#f5a524','#7bd36b','#2ee6a6'][s];$('rgHint').textContent=!p?'อย่างน้อย 8 ตัว มีตัวอักษรและตัวเลข':okPw(p)?['','อ่อน','พอใช้','ดี','แข็งแรงมาก'][Math.max(1,s)]:'ยังไม่ผ่าน: ต้อง 8 ตัวขึ้นไป มีตัวอักษรและตัวเลข';});
+    const busy=(b,v)=>{b.disabled=v;};
+    const finish=async(tok,name,rem)=>{accStore(tok,name,rem);$('lgPw').value=$('rgPw').value=$('rgPw2').value='';accRender();toast('ยินดีต้อนรับ '+name);await accPull();};
+    const doLogin=async()=>{
+      const id=$('lgId').value.trim(),pw=$('lgPw').value,er=$('lgErr'),btn=$('lgGo');er.textContent='';
+      if(!id||!pw){er.textContent='กรอกชื่อผู้ใช้/อีเมล และรหัสผ่าน';return;}
+      busy(btn,true);
+      try{
+        if(ACC.local){const o=await locAuth('login',{id,password:pw});if(o.err){er.textContent=ACC_MSG[o.err];return;}await finish('L:'+o.key,o.rec.name,$('lgRem').checked);}
+        else{const r=await accApi('/api/auth/login','POST',{id,password:pw,remember:$('lgRem').checked});
+          if(!r.ok){er.textContent=(ACC_MSG[r.j.err]||ACC_MSG.bad)+(r.j.err==='locked'&&r.j.wait?' ('+Math.ceil(r.j.wait/60)+' นาที)':'');return;}
+          ACC.prof=r.j.profile;await finish(r.j.token,r.j.profile.username,$('lgRem').checked);}
+      }finally{busy(btn,false);}
+    };
+    $('lgGo').onclick=doLogin;$('lgPw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});$('lgId').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+    const doReg=async()=>{
+      const un=$('rgUser').value.trim(),em=$('rgMail').value.trim(),pw=$('rgPw').value,pw2=$('rgPw2').value,er=$('rgErr'),btn=$('rgGo');er.textContent='';
+      if(!okUser(un)){er.textContent=ACC_MSG.username;return;}if(!okMail(em)){er.textContent=ACC_MSG.email;return;}if(!okPw(pw)){er.textContent=ACC_MSG.weak;return;}if(pw!==pw2){er.textContent=ACC_MSG.confirm;return;}
+      busy(btn,true);
+      try{
+        if(ACC.local){const o=await locAuth('register',{username:un,email:em,password:pw});if(o.err){er.textContent=ACC_MSG[o.err];return;}await finish('L:'+o.key,o.rec.name,true);}
+        else{const r=await accApi('/api/auth/register','POST',{username:un,email:em,password:pw,confirm:pw2,remember:true});
+          if(!r.ok){er.textContent=ACC_MSG[r.j.err]||ACC_MSG.bad;return;}ACC.prof=r.j.profile;await finish(r.j.token,r.j.profile.username,true);}
+      }finally{busy(btn,false);}
+    };
+    $('rgGo').onclick=doReg;$('rgPw2').addEventListener('keydown',e=>{if(e.key==='Enter')doReg();});
+  }
+  const lc=$('gLocal');if(lc)lc.textContent=ACC.local?' (บัญชีเก็บในเบราว์เซอร์นี้)':'';
+  if(!ACC.tok&&g.dataset.v!=='1'){$('pLogin').style.display='block';$('pReg').style.display='none';$('lgErr').textContent=$('rgErr').textContent='';}
+  g.dataset.v=ACC.tok?'0':'1';
+  g.style.display=ACC.tok?'none':'flex';
+  if(!ACC.tok&&ACC.gid){const gb=$('gbtn2');try{if(gb&&!gb.firstChild&&window.google&&google.accounts&&google.accounts.id)google.accounts.id.renderButton(gb,{theme:'filled_black',size:'large',text:'signin_with',shape:'rectangular'});}catch(e){}}
+}
+function accProfile(){
+  accCss();let m=$('profMod');
+  if(!m){m=document.createElement('div');m.id='profMod';m.innerHTML='<div class="pc"><div class="lg" style="font:700 20px var(--display);letter-spacing:.08em;margin-bottom:10px;color:#ffb02e">PLAYER PROFILE</div><div id="profRows"></div><div class="row" style="display:flex;gap:9px;margin-top:14px"><button class="btn" id="profX" style="flex:1;padding:9px">ปิด</button><button class="btn" id="profOut" style="flex:1;padding:9px">ออกจากระบบ</button></div></div>';document.body.appendChild(m);
+    m.onclick=e=>{if(e.target===m)m.style.display='none';};$('profX').onclick=()=>m.style.display='none';$('profOut').onclick=()=>{m.style.display='none';accLogout();};}
+  const draw=()=>{const p=ACC.prof||{},t=s=>{s=+s||0;return Math.floor(s/3600)+' ชม. '+Math.floor(s%3600/60)+' นาที';};
+    const rows=[['Player ID',p.playerId||'-'],['Username',p.username||ACC.name],['Email',p.email||'-'],['สมัครเมื่อ',p.createdAt?new Date(p.createdAt).toLocaleDateString('th-TH'):'-'],['Level',p.level||1],['EXP',(p.exp||0)+(typeof lvInfo==='function'?' / '+(lvInfo(save.xp).need||'MAX'):'')],['เงินในเกม','$'+(p.money||0).toLocaleString()],['ชนะ',p.wins||0],['แพ้',p.losses||0],['เวลาเล่นทั้งหมด',t(p.playSeconds)]];
+    $('profRows').innerHTML=rows.map(r=>'<div class="pr"><span>'+r[0]+'</span><b></b></div>').join('');$('profRows').querySelectorAll('b').forEach((b,i)=>b.textContent=rows[i][1]);};
+  m.style.display='flex';
+  try{if(typeof writeSave==='function')writeSave();}catch(e){}
+  if(ACC.local){ACC.prof=locProfile();draw();}
+  else{draw();accPushNow();setTimeout(()=>accApi('/api/auth/profile','GET').then(r=>{if(r.ok&&r.j.profile){ACC.prof=r.j.profile;draw();}}),400);}
+}
+function accRender(){
+  accGate();
+  const bl=$('btnLogin');
+  if(bl){bl.textContent=ACC.tok?'ออกจากระบบ':'ล็อคอิน';
+    if(!bl._h){bl._h=1;bl.onclick=()=>{if(!ACC.on){toast('กำลังโหลดระบบบัญชี... ลองใหม่อีกครั้ง');return;}if(ACC.tok)accLogout();else{accGate();}};}
+    let bp=$('btnProfile');if(!bp){bp=document.createElement('button');bp.className='btn sec';bp.id='btnProfile';bp.textContent='โปรไฟล์';bp.onclick=accProfile;bl.parentNode.insertBefore(bp,bl);}
+    bp.style.display=ACC.tok?'':'none';
+    let w=$('welcome');const col=document.querySelector('#sTitle .ctaCol');
+    if(!w&&col){w=document.createElement('div');w.id='welcome';col.parentNode.insertBefore(w,col);}
+    if(w){w.style.display=ACC.tok?'block':'none';if(ACC.tok){const L=typeof lvInfo==='function'?lvInfo(save.xp).L:1;w.innerHTML='ผู้เล่น <b></b> · Lv '+L;w.querySelector('b').textContent=ACC.name;}}}
+  const box=$('acct');if(box)box.innerHTML='';
+  if(box&&ACC.on&&ACC.tok&&ACC.name){const d=document.createElement('div');d.style.cssText='font:600 12px var(--display);color:var(--text);text-align:right;letter-spacing:.04em';d.textContent='👤 '+ACC.name;box.appendChild(d);}
+}
+/* ---- legacy Google login (optional, server mode only) ---- */
 async function accOnCred(resp){
-  try{
-    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:resp.credential})});
-    if(!r.ok)throw 0;const j=await r.json();ACC.tok=j.token;ACC.name=j.name;ACC.pic=j.pic||'';
-    try{localStorage.setItem('bh_tok',ACC.tok);localStorage.setItem('bh_name',ACC.name);localStorage.setItem('bh_pic',ACC.pic);}catch(e){}
-    if(!save.nick||save.nick==='Hunter'){save.nick=ACC.name.slice(0,14);if(typeof NET!=='undefined')NET.nick=save.nick;}
-    accRender();toast('ล็อคอินแล้ว: '+ACC.name);await accPull();
-  }catch(e){toast('ล็อคอินไม่สำเร็จ');}
+  const r=await accApi('/api/login','POST',{credential:resp.credential});
+  if(!r.ok){toast('ล็อคอินไม่สำเร็จ');return;}
+  accStore(r.j.token,r.j.name,true);accRender();toast('ล็อคอินแล้ว: '+r.j.name);await accPull();
 }
 async function accInit(){
-  try{
-    const c=await (await fetch('/api/config')).json();if(!c||!c.gid)return;ACC.gid=c.gid;ACC.on=true;
-    if(ACC.tok){const r=await fetch('/api/me',{headers:accHdr()});if(r.ok)accPull();else{ACC.tok='';ACC.name='';}}
-    const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;
-    s.onload=()=>{try{google.accounts.id.initialize({client_id:ACC.gid,callback:accOnCred});}catch(e){}accRender();};
-    s.onerror=()=>accRender();document.head.appendChild(s);accRender();
-  }catch(e){}
+  accCss();let c=null;
+  try{const r=await fetch('/api/config');c=await r.json();}catch(e){c=null;}
+  if(c&&(c.gid||c.acct)){
+    ACC.gid=c.gid||'';ACC.on=true;ACC.local=false;
+    if(ACC.tok){const r=await accApi('/api/me','GET');if(r.ok){if(r.j.profile)ACC.prof=r.j.profile;accPull();}else if(r.status===401){ACC.tok='';ACC.name='';['bh_tok','bh_name'].forEach(lsD);['bh_tok','bh_name'].forEach(ssD);}}
+    accRender();
+    if(ACC.gid){const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;s.onload=()=>{try{google.accounts.id.initialize({client_id:ACC.gid,callback:accOnCred});}catch(e){}accRender();};document.head.appendChild(s);}
+    return;
+  }
+  ACC.on=true;ACC.local=true;ACC.gid='';
+  if(ACC.tok&&!(ACC.tok.startsWith('L:')&&locUsers()[ACC.tok.slice(2)])){ACC.tok='';ACC.name='';}
+  if(ACC.tok)accPull();
+  accRender();
 }
 setTimeout(accInit,200);
+try{const v=document.createElement('div');v.textContent='build 54';v.style.cssText='position:fixed;right:6px;bottom:4px;font:10px monospace;color:#6a7a8a;z-index:5;pointer-events:none';document.body.appendChild(v);}catch(e){}
 /* =====================  LOBBY / SHOP / UPGRADES  ===================== */
 const LB={tab:'stages',stage:0,weapon:'pistol',upMode:'weapon'};
 function bar(label,v,max){return '<span>'+label+'</span><div class="bar"><i style="width:'+clamp(v/max*100,3,100)+'%"></i></div>';}
