@@ -51,10 +51,6 @@ const server=http.createServer((req,res)=>{
     return res.end(req.method==='HEAD'?undefined:(gz?htmlGz:html));
   }
   if(u==='/healthz'){ACCT_READY.then(()=>{res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({ok:true,conns,rooms:rooms.size,acct:!!ACCT,persistent:!!process.env.DATA_DIR}));});return;}
-  if(u==='/models/red_dragon.glb'){
-    const f=path.join(__dirname,'public','models','red_dragon.glb');
-    return fs.readFile(f,(e,d)=>{if(e){res.writeHead(404);return res.end();}res.writeHead(200,{'Content-Type':'model/gltf-binary','Cache-Control':'public,max-age=86400','X-Content-Type-Options':'nosniff'});res.end(req.method==='HEAD'?undefined:d);});
-  }
   if(u==='/favicon.ico'){res.writeHead(204);return res.end();}
   res.writeHead(404,{'Content-Type':'text/plain'});res.end('not found');
 });
