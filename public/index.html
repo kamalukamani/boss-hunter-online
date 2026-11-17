@@ -2723,7 +2723,7 @@ function updatePickups(dt,t){
       sfxPickup();scene.remove(p.g);disposeTree(p.g);PICKS.splice(i,1);updateHud(true);}}
 }
 /* =====================  HUD  ===================== */
-let menuOpen=false,ghost=1,hudCache={},pickTimer=14,gt=0,inFightShop=false;
+let menuOpen=false,ghost=1,hudCache={},pickTimer=10,gt=0,inFightShop=false;
 const DN=[];
 function setTxt(id,v){if(hudCache[id]!==v){hudCache[id]=v;$(id).textContent=v;}}
 function updateHud(force){
@@ -2802,9 +2802,9 @@ function beginFight(idx){
       cleanupFight();
       arena=buildArena(def.map);scene.add(arena.g);applyEnv(arena.cfg);
       boss=makeBoss(def);boss.pos.set(0,0,-20);boss.yaw=Math.PI;boss.st='intro';boss.stT=0;boss.atkCd=2;
-      if(NET.on){boss.maxHp=Math.round(def.hp*(1+.8*(NET.n-1)));boss.hp=boss.maxHp;}scene.add(boss.root);syncBoss(boss);
+      if(NET.on){boss.maxHp=Math.round(def.hp*(1+.2*(NET.n-1)));boss.hp=boss.maxHp;}scene.add(boss.root);syncBoss(boss);
       resetPlayer();if(NET.on)P.pos.set((NET.idx-(NET.n-1)/2)*Math.min(3.5,30/Math.max(1,NET.n-1)),0,26);P.respawn=0;initAmmo();WS.cur=(loadout().includes(save.equip)&&W[save.equip])?save.equip:loadout()[0];WS.last=WS.cur;WS.swap=0;WS.swapTo=null;WS.reload=0;WS.ads=0;WS.cd=.4;WS.bloom=0;setGunModel(WS.cur);
-      if(!NET.on||NET.host){spawnPickRandom('hp');spawnPickRandom('ammo');}pickTimer=14;gt=0;TS=1;slowT=0;ghost=1;lastWin=null;
+      if(!NET.on||NET.host){spawnPickRandom('hp');spawnPickRandom('ammo');}pickTimer=10;gt=0;TS=1;slowT=0;ghost=1;lastWin=null;
       $('bbName').textContent=def.name;$('bbTitle').textContent=def.title;const ch=$('bbDiff');ch.textContent=def.diff+(NET.on&&NET.n>1?' · CO-OP x'+NET.n:'');ch.style.color=def.diff==='EASY'?'var(--green)':def.diff==='MEDIUM'?'var(--amber)':def.diff==='HARD'?'#ff7a3a':'var(--red)';
       document.body.classList.add('fight');mode='fight';ambStart(def.map);refreshAmmo();updateHud(true);if(NET.on)netFightStart();
       setTimeout(()=>{if(mode==='fight')splashShow('BOSS '+(idx+1)+' / '+BOSS_DEF.length,def.name,def.title+'  ·  '+MAPS[def.map],3200);},700);
@@ -2860,7 +2860,7 @@ function updateFight(dt0){
   if(NET.on)netFightTick(dt0);
   updateGunView(dt0,gt);updateWeapon(dt,ctrl);
   updateProjectiles(dt);updateWaves(dt);updatePickups(dt,gt);updateFx(dt);envUpdate(dt,gt);updateDmgNums(dt0);hudFrame(dt0);
-  if(ctrl&&(!NET.on||NET.host)){pickTimer-=dt;if(pickTimer<=0&&boss&&boss.st!=='dying'){pickTimer=16;if(PICKS.length<4)spawnPickRandom();}}
+  if(ctrl&&(!NET.on||NET.host)){pickTimer-=dt0;if(pickTimer<=0&&boss&&boss.st!=='dying'){pickTimer+=10;if(pickTimer<=0)pickTimer=10;if(PICKS.filter(q=>q.type==='hp').length<6)spawnPickRandom('hp');if(PICKS.filter(q=>q.type==='ammo').length<6)spawnPickRandom('ammo');}}
   if(frameN++%6===0)updateHud(false);
   if(boss&&boss.st==='dying'&&boss.deathT>4.8&&!boss.won){boss.won=true;showWin();}
 }
@@ -3226,7 +3226,7 @@ function netHostStart(stage){
   netEvent('start',ev);netStartLocal(Object.assign({t:'start'},ev));
 }
 function netStartLocal(ev){
-  NET.fid=ev.f;NET.n=Math.max(1,ev.n||1);NET.spd=1+.25*(NET.n-1);NET.idx=Math.max(0,(ev.ids||[]).indexOf(NET.me));
+  NET.fid=ev.f;NET.n=Math.max(1,ev.n||1);NET.spd=1+.10*(NET.n-1);NET.idx=Math.max(0,(ev.ids||[]).indexOf(NET.me));
   NET.dd=0;NET.ddSeen={};NET.fc=0;NET.bs=null;NET.wipeT=0;
   hideScreens();beginFight(ev.s);
 }
