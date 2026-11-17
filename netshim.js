@@ -9,7 +9,11 @@ function makeClaudeShim(url,WS){
       try{ws=new WS(url);}catch(e){ready=null;return rej({code:'upstream_error'});}
       const t=setTimeout(()=>{if(!done){try{ws.close();}catch(e){}rej({code:'upstream_error'});}},10000);
       ws.onmessage=ev=>{let m;try{m=JSON.parse(ev.data);}catch(e){return;}
-        if(m.t==='hello'){myId=m.id;done=true;clearTimeout(t);res();return;}
+        if(m.t==='hello'){myId=m.id;done=true;clearTimeout(t);
+          try{const tk=(localStorage.getItem('bh_tok')||sessionStorage.getItem('bh_tok')||'');if(tk.indexOf('s_')===0)send({t:'auth',token:tk});}catch(e){}
+          res();return;}
+        if(m.t==='host'){const r0=rooms[m.room]||Object.values(rooms)[0];if(r0){r0.hostId=m.id;r0.dirty=true;touch(r0);}return;}
+        if(m.t==='sb'||m.t==='online'||m.t==='revived'||m.t==='rvok'||m.t==='rvno'||m.t==='authok'||m.t==='autherr'){try{if(window.BH_RAW)window.BH_RAW(m);}catch(e){}return;}
         dispatch(m);};
       ws.onerror=()=>{};
       ws.onclose=()=>{clearTimeout(t);if(!done){ready=null;ws=null;rej({code:'upstream_error'});}else fail('upstream_error');};
@@ -32,7 +36,7 @@ function makeClaudeShim(url,WS){
     const r={name,map:new Map(),subs:[],errs:[],dirty:true,cache:[],pending:false,dead:false,onSnap:null,onErr:null};
     r.snapshot=()=>{
       if(!r.dirty)return r.cache;
-      r.cache=Array.from(r.map,([id,e])=>Object.freeze({peer:id,by:null,isMe:id===myId,sameTab:id===myId,kind:'viewer',guest:false,presence:e.presence,updatedAt:e.at}));
+      r.cache=Array.from(r.map,([id,e])=>Object.freeze({peer:id,by:null,isMe:id===myId,sameTab:id===myId,host:id===r.hostId,kind:'viewer',guest:false,presence:e.presence,updatedAt:e.at}));
       r.dirty=false;return r.cache;};
     return r;
   }
@@ -46,6 +50,7 @@ function makeClaudeShim(url,WS){
     onConnection(h){setTimeout(()=>h(!!ws&&ws.readyState===1),0);return()=>{};},
     leave(){send({t:'leave'});r.dead=true;delete rooms[r.name];return Promise.resolve();}
   });
+  try{window.BH_SEND=o=>send(o);window.BH_NET=()=>!!ws&&ws.readyState===1&&Object.keys(rooms).length>0;}catch(e){}
   const room={
     async join(name){
       if(!/^[a-z0-9][a-z0-9_.-]{0,47}$/.test(name))throw {code:'invalid_argument'};

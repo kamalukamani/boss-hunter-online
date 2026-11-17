@@ -1,5 +1,5 @@
 // Usage: PORT=8127 DATA_DIR=/tmp/bh-test node server.js &  then  node test_accounts.js
-const B='http://localhost:8127';
+const B='http://localhost:'+(process.env.PORT||8127);
 const j=async(m,p,b,t)=>{const r=await fetch(B+p,{method:m,headers:{'Content-Type':'application/json',...(t?{Authorization:'Bearer '+t}:{})},body:b?JSON.stringify(b):undefined});return[r.status,await r.json().catch(()=>({}))];};
 (async()=>{
 const out=[];const P=(n,v)=>out.push(n+': '+v);

@@ -39,7 +39,10 @@ module.exports = async function initMongo() {
     users.createIndex({ player_id: 1 }, { unique: true, name: 'player_id_unique' }),
     playerData.createIndex({ user_id: 1 }, { unique: true, name: 'player_user_unique' }),
     sessions.createIndex({ token_hash: 1 }, { unique: true, name: 'session_token_unique' }),
-    sessions.createIndex({ expires_at: 1 }, { expireAfterSeconds: 0, name: 'session_ttl' })
+    sessions.createIndex({ expires_at: 1 }, { expireAfterSeconds: 0, name: 'session_ttl' }),
+    playerData.createIndex({ level: -1, exp: -1 }, { name: 'lb_level' }),
+    playerData.createIndex({ total_damage: -1 }, { name: 'lb_damage' }),
+    playerData.createIndex({ money: -1 }, { name: 'lb_money' })
   ]);
 
   console.log('[accounts] MongoDB connected; database:', db.databaseName);
@@ -107,11 +110,52 @@ module.exports = async function initMongo() {
     return o;
   };
 
-  return async function handle(req, res, u, readBody, jr) {
+  /* ---- anti-tamper: damage / damage-taken accepted only up to a plausible rate (token buckets) ---- */
+  const bk = new Map();
+  function clampStats(key, d) {
+    const now = Date.now(); let b = bk.get(key);
+    if (!b) { b = { dm: 3e6, rc: 2e5, t: now, k: 0 }; bk.set(key, b); }
+    const dt = Math.min(30, (now - b.t) / 1000); b.t = now;
+    b.dm = Math.min(6e6, b.dm + dt * 1.5e6); b.rc = Math.min(4e5, b.rc + dt * 1e5);
+    const out = { dealt: Math.max(0, Math.min(+d.dealt || 0, b.dm)), recv: Math.max(0, Math.min(+d.recv || 0, b.rc)), kills: 0, deaths: 0 };
+    b.dm -= out.dealt; b.rc -= out.recv;
+    if (d.kills && now - b.k > 15000) { out.kills = 1; b.k = now; }
+    if (d.deaths) out.deaths = Math.min(1, +d.deaths || 0);
+    return out;
+  }
+  setInterval(() => { const n = Date.now(); for (const [k, b] of bk) if (n - b.t > 3e5) bk.delete(k); }, 6e4).unref();
+
+  /* in-memory copy of each connected player's numbers (scoreboard reads these synchronously) */
+  const pdc = new Map();
+  const remember = (uid, d) => { if (d) pdc.set(String(uid), { level: d.level || 1, exp: d.exp || 0, money: d.money || 0, total_damage: d.total_damage || 0, last_win: d.last_win || 0, last_ping: d.last_ping || 0 }); };
+
+  const lbCache = {};
+  async function leaderboard(type, uid) {
+    const now = Date.now(), c = lbCache[type]; let rows;
+    if (c && now - c.at < 3000) rows = c.rows;
+    else {
+      const sort = type === 'damage' ? { total_damage: -1 } : type === 'money' ? { money: -1 } : { level: -1, exp: -1 };
+      const docs = await playerData.find({}).sort(sort).limit(100).toArray();
+      rows = docs.map((r, i) => ({ rank: i + 1, name: r.username || '?', pid: r.player_id || '', level: r.level || 1, exp: r.exp || 0, money: r.money || 0, damage: r.total_damage || 0 }));
+      lbCache[type] = { at: now, rows };
+    }
+    let me = null;
+    if (uid) {
+      const d = await playerData.findOne({ user_id: uid });
+      if (d) {
+        const L = d.level || 1, E = d.exp || 0, D = d.total_damage || 0, M = d.money || 0;
+        const better = type === 'damage' ? { total_damage: { $gt: D } } : type === 'money' ? { money: { $gt: M } } : { $or: [{ level: { $gt: L } }, { level: L, exp: { $gt: E } }] };
+        me = { rank: (await playerData.countDocuments(better)) + 1, level: L, exp: E, money: M, damage: D };
+      }
+    }
+    return { type, rows, me };
+  }
+
+  const handle = async function handle(req, res, u, readBody, jr) {
     const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 
     if (u === '/api/auth/register' && req.method === 'POST') {
-      if (!hitOk('reg:' + ip, 15)) { jr(res, 429, { err: 'rate' }); return true; }
+      if (!hitOk('reg:' + ip, process.env.BH_TEST ? 1000 : 15)) { jr(res, 429, { err: 'rate' }); return true; }
       const b = JSON.parse(await readBody(req, 4000));
       const un = String(b.username || '').trim();
       const em = String(b.email || '').trim().toLowerCase();
@@ -136,7 +180,7 @@ module.exports = async function initMongo() {
       try {
         const ins = await users.insertOne(user);
         user._id = ins.insertedId;
-        await playerData.insertOne({ user_id: user._id, level: 1, exp: 0, money: 0, wins: 0, losses: 0, play_seconds: 0, last_ping: 0, last_win: 0, save_json: null, updated_at: now });
+        await playerData.insertOne({ user_id: user._id, username: un, player_id: user.player_id, level: 1, exp: 0, money: 0, wins: 0, losses: 0, play_seconds: 0, last_ping: 0, last_win: 0, total_damage: 0, kills: 0, total_recv: 0, deaths: 0, revives: 0, save_json: null, updated_at: now });
       } catch (e) {
         if (e && e.code === 11000) { jr(res, 409, { err: 'taken' }); return true; }
         throw e;
@@ -163,7 +207,12 @@ module.exports = async function initMongo() {
       jr(res, 200, { token: await mkSession(row._id, !!b.remember), profile: await profile(row) }); return true;
     }
 
-    const accountPaths = ['/api/auth/logout', '/api/auth/profile', '/api/me', '/api/save', '/api/event', '/api/ping'];
+    if (u === '/api/leaderboard' && req.method === 'GET') {
+      const t = new URL(req.url, 'http://x').searchParams.get('type') || 'level';
+      const a0 = String(req.headers.authorization || '').startsWith('Bearer s_') ? await authReq(req) : null;
+      jr(res, 200, await leaderboard(['level', 'damage', 'money'].includes(t) ? t : 'level', a0 && a0.uid)); return true;
+    }
+    const accountPaths = ['/api/auth/logout', '/api/auth/profile', '/api/me', '/api/save', '/api/stats', '/api/event', '/api/ping'];
     if (!accountPaths.includes(u)) return false;
     const bearer = String(req.headers.authorization || '').replace(/^Bearer /, '');
     // Let the legacy Google-token handler in server.js process non-MongoDB tokens.
@@ -196,9 +245,16 @@ module.exports = async function initMongo() {
       const js = JSON.stringify(save);
       if (js.length > 250000) { jr(res, 413, { err: 'big' }); return true; }
       await playerData.updateOne({ user_id: a.uid }, {
-        $set: { level: I.L, exp: Math.floor(I.r), money, save_json: js, updated_at: Date.now() }
+        $set: { level: I.L, exp: Math.floor(I.r), money, save_json: js, updated_at: Date.now(), username: user.username, player_id: user.player_id }
       }, { upsert: true });
+      const cc = pdc.get(String(a.uid)) || {}; cc.level = I.L; cc.exp = Math.floor(I.r); cc.money = money; pdc.set(String(a.uid), cc);
+      lbCache.level = lbCache.money = null;
       jr(res, 200, { ok: true, profile: await profile(user) }); return true;
+    }
+    if (u === '/api/stats' && req.method === 'POST') { /* solo play: batched stat deltas, rate-limited server side */
+      const b = JSON.parse(await readBody(req, 600)), o = clampStats('u' + String(a.uid), b);
+      await handle.persist(a.uid, o); lbCache.damage = lbCache.level = lbCache.money = null;
+      jr(res, 200, { ok: true }); return true;
     }
     if (u === '/api/event' && req.method === 'POST') {
       const b = JSON.parse(await readBody(req, 500)), d = await playerData.findOne({ user_id: a.uid }) || {}, now = Date.now();
@@ -219,4 +275,24 @@ module.exports = async function initMongo() {
     }
     return false;
   };
+  handle.auth = async tok => {
+    tok = String(tok || ''); if (!/^s_[0-9a-f]{64}$/.test(tok)) return null;
+    const ses = await sessions.findOne({ token_hash: sha(tok), expires_at: { $gt: new Date() } }); if (!ses) return null;
+    const user = await users.findOne({ _id: ses.user_id }); if (!user) return null;
+    const d = await playerData.findOne({ user_id: user._id }); remember(user._id, d);
+    if (d && !d.username) playerData.updateOne({ user_id: user._id }, { $set: { username: user.username, player_id: user.player_id } }).catch(() => {});
+    return { uid: user._id, name: user.username, pid: user.player_id };
+  };
+  handle.pd = uid => pdc.get(String(uid));
+  handle.clamp = clampStats;
+  handle.persist = async (uid, o) => {
+    try {
+      const dm = Math.floor(o.dealt || 0);
+      await playerData.updateOne({ user_id: uid }, { $inc: { total_damage: dm, kills: Math.floor(o.kills || 0), total_recv: Math.floor(o.recv || 0), deaths: Math.floor(o.deaths || 0) } });
+      const c = pdc.get(String(uid)); if (c) c.total_damage = (c.total_damage || 0) + dm;
+    } catch (e) {}
+  };
+  handle.revive = uid => { playerData.updateOne({ user_id: uid }, { $inc: { revives: 1 } }).catch(() => {}); };
+  handle.leaderboard = leaderboard;
+  return handle;
 };

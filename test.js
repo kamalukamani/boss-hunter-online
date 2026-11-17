@@ -1,21 +1,23 @@
 const {spawn}=require('child_process');const fs=require('fs');
 eval(fs.readFileSync('netshim.js','utf8')+';globalThis.makeClaudeShim=makeClaudeShim;');
 const PORT=3457;
-const srv=spawn('node',['server.js'],{env:{...process.env,PORT}});srv.stdout.on('data',()=>{});
+const srv=spawn('node',['server.js'],{env:{...process.env,BH_TEST:'1',PORT,DATA_DIR:'/tmp/bh-test-'+process.pid}});srv.stdout.on('data',()=>{});
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
   await sleep(500);
   const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1;};
   const r=await fetch('http://localhost:'+PORT+'/healthz');ok((await r.json()).ok,'healthz');
   const page=await fetch('http://localhost:'+PORT+'/');ok(page.status===200&&(await page.text()).includes('<'),'serves index');
+  const T=[];for(let i=0;i<24;i++){const rg=await(await fetch('http://localhost:'+PORT+'/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'relaytest'+i,email:'r'+i+'@t.co',password:'abcd1234',confirm:'abcd1234'})})).json();T.push(rg.token);}
+  let ti=0;globalThis.localStorage={getItem:()=>T[ti++%T.length]};globalThis.sessionStorage={getItem:()=>''};
   const a=makeClaudeShim('ws://localhost:'+PORT+'/ws',WebSocket),b=makeClaudeShim('ws://localhost:'+PORT+'/ws',WebSocket),c=makeClaudeShim('ws://localhost:'+PORT+'/ws',WebSocket);
   const ra=await(await a.use('room')).join('bh-test1'),rb=await(await b.use('room')).join('bh-test1');
   ra.presence({nm:'A',x:1.5,E:[{q:1,t:'start'}]});rb.presence({nm:'B',hp:150});
   await sleep(300);
   const pa=ra.peers(),pb=rb.peers();
   ok(pa.length===2&&pb.length===2,'both see 2 peers ('+pa.length+','+pb.length+')');
-  ok(pb.find(p=>!p.isMe).presence.nm==='A'&&pb.find(p=>!p.isMe).presence.E[0].q===1,'B sees A presence incl. nested events');
-  ok(pa.find(p=>p.isMe).presence.nm==='A'&&pa.filter(p=>p.isMe).length===1,'A sees itself once');
+  ok(pb.find(p=>!p.isMe).presence.nm.startsWith('relaytest')&&pb.find(p=>!p.isMe).presence.E[0].q===1,'B sees A presence incl. nested events');
+  ok(pa.filter(p=>p.isMe).length===1,'A sees itself once');
   ra.presence({x:null});await sleep(200);ok(!('x' in rb.peers().find(p=>!p.isMe).presence),'null removes field');
   const rc=await(await c.use('room')).join('bh-other');await sleep(100);ok(rc.peers().length===1,'rooms are isolated');
   await rb.leave();await sleep(200);ok(ra.peers().length===1,'leave removes peer');

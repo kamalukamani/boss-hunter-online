@@ -1,11 +1,14 @@
 {
   "name": "boss-hunter-3d",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "FPS boss hunter game with online co-op rooms and MongoDB accounts",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test:accounts": "node test_accounts.js"
+    "test:accounts": "node test_accounts.js",
+    "test:relay": "node test.js",
+    "test:multi": "node test_multi.js",
+    "test:host": "node test_host.js"
   },
   "engines": {
     "node": ">=22.13"
