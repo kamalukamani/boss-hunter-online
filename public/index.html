@@ -347,8 +347,6 @@ body.touch.fight #touch{display:block}
 <script>if(!window.THREE)document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"><\/script>');</script>
 <script>if(!window.THREE)document.write('<script src="https://unpkg.com/three@0.128.0/build/three.min.js"><\/script>');</script>
 <script>if(!window.THREE&&window.__showErr)window.__showErr("โหลด three.js ไม่ได้ (ตรวจอินเทอร์เน็ต/ตัวบล็อกโฆษณา)");</script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script>
 /* Provides window.claude.use('room') on a normal website, backed by the /ws relay. */
 function makeClaudeShim(url,WS){
@@ -1252,7 +1250,7 @@ function cinderArrays(){
   }
   return _cdArr;
 }
-function buildCinderLegacy(){
+function buildCinder(){
   curMats=[];const S=[],CD=CINDER_DATA,A=cinderArrays(),R={};
   const m=new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.DoubleSide});m.userData={tint:[1,1,1]};curMats.push(m);
   const root=new THREE.Group();R.root=root;const rig=grp(root,0,0,0);R.rig=rig;
@@ -1298,7 +1296,7 @@ function cinderTarget(b){
   }
   return ckMix(S,CK.idle,ease(u));
 }
-function animCinderLegacy(b,dt){
+function animCinder(b,dt){
   const R=b.R,t=b.t,f2=b.phase>=2,tg=cinderTarget(b),cp=b.cp||(b.cp=Object.assign({},CK.idle));
   const rate=b.st==='attack'?(b.stage==='s'?34:b.stage==='w'?9:7):10,k=1-Math.exp(-rate*dt);
   for(const key of CKEYS)cp[key]+=(tg[key]-cp[key])*k;
@@ -1320,119 +1318,12 @@ function animCinderLegacy(b,dt){
   }
 }
 function animBoss(b,dt){if(b.k==='dragon')animDragon(b,dt);else if(b.k==='astral')animAstral(b,dt);else if(b.k==='artorias')animArtorias(b,dt);else if(b.k==='cinder')animCinder(b,dt);else(b.beast?animBeast:animHum)(b,dt);}
-function cinderDeathLegacy(b,dt){
+function cinderDeath(b,dt){
   b.deathT+=dt;const t=b.deathT,R=b.R,e=ease(clamp(t/2.4,0,1)),k=1-Math.exp(-6*dt);
   R.body.position.y+=(R.bodyY-1.15*e-R.body.position.y)*k;R.body.rotation.x+=(-.95*e-R.body.rotation.x)*k;R.body.rotation.z+=(.25*e-R.body.rotation.z)*k;
   R.legL.rotation.x+=(-1.2*e-R.legL.rotation.x)*k;R.legR.rotation.x+=(-1.0*e-R.legR.rotation.x)*k;R.blade.rotation.z+=(-1.1*e-R.blade.rotation.z)*k;R.arm2.rotation.z+=(-.3*e-R.arm2.rotation.z)*k;
   const tint=b.mats[0].userData.tint;tint[0]=Math.max(.15,1.2-t*.3);tint[1]=Math.max(.1,.8-t*.25);tint[2]=Math.max(.1,.7-t*.25);
   if(Math.random()<dt*50){R.body.updateMatrixWorld(true);fx(worldOf(R.body).add(new THREE.Vector3(rnd(-1.5,1.5),rnd(0,4),rnd(-1.5,1.5))),1,Math.random()<.5?0xff5a1f:0xffb02e,3,1,.2,-1.2,1.2);}
-  if(!b.fell&&t>2.4){b.fell=true;const q=b.pos.clone();q.y=1.5;boom(q,5,0xff5a1f);sfxSlam(1);addShake(1);}
-  if(t>3.2){const u=clamp((t-3.2)/1.8,0,1);b.vis=Math.max(.001,1-ease(u));if(u>=1&&!b.gone){b.gone=true;const q=b.pos.clone();q.y=2;boom(q,6,0xffb02e);b.root.visible=false;}}
-}
-/* =====================  SOUL OF CINDER -> RED DRAGON (GLB, poses blended in code)  =====================
-   red_dragon.glb has only single-frame poses (no motion clips), so: bones are blended between poses each frame
-   (ref=grounded, flightTest=wings spread, flight_fire=breathing fire, angryFlightPose=rearing) and the rig group
-   adds pitch/yaw/roll/hover. Falls back to the old model if the GLB or loaders are unavailable. */
-let DRAGON_GLB=null;
-function preloadDragon(){
-  try{
-    if(DRAGON_GLB||!(THREE.GLTFLoader&&THREE.SkeletonUtils))return;
-    new THREE.GLTFLoader().load('/models/red_dragon.glb',g=>{DRAGON_GLB=g;},undefined,e=>console.warn('[dragon] load failed, legacy Cinder model used',e));
-  }catch(e){console.warn('[dragon]',e);}
-}
-const DR_PK=['ref','flightTest','flight_fire','angryFlightPose'],DR_KEYS=['pitch','yaw','roll','dy','fz','fire','angry','spread'],DR_SCALE=3.3;
-function dragonPose(R,w){
-  const pl=R.pl;
-  for(let i=0;i<pl.length;i++){
-    const e=pl[i],rq=e.ref.q;let px=0,py=0,pz=0,qx=0,qy=0,qz=0,qw=0,sx=0,sy=0,sz=0;
-    for(let j=0;j<4;j++){const wt=w[DR_PK[j]];if(!(wt>.001))continue;const d=e[DR_PK[j]],p=d.p,q=d.q,s=d.s,sg=(q[0]*rq[0]+q[1]*rq[1]+q[2]*rq[2]+q[3]*rq[3])<0?-wt:wt;
-      px+=p[0]*wt;py+=p[1]*wt;pz+=p[2]*wt;qx+=q[0]*sg;qy+=q[1]*sg;qz+=q[2]*sg;qw+=q[3]*sg;sx+=s[0]*wt;sy+=s[1]*wt;sz+=s[2]*wt;}
-    const o=e.o;o.position.set(px,py,pz);o.quaternion.set(qx,qy,qz,qw).normalize();o.scale.set(sx,sy,sz);
-  }
-}
-function buildCinder(){
-  if(!DRAGON_GLB)return buildCinderLegacy();
-  curMats=[];const S=[],R={dragon:true};
-  const root=new THREE.Group();R.root=root;const rig=grp(root,0,0,0);rig.rotation.order='YXZ';R.rig=rig;
-  const holder=grp(rig,0,-.04*DR_SCALE,-1.0);holder.scale.setScalar(DR_SCALE);
-  const model=THREE.SkeletonUtils.clone(DRAGON_GLB.scene);holder.add(model);
-  const byName=new Map(),cm=new Map();
-  model.traverse(o=>{
-    if(o.name)byName.set(o.name,o);
-    if(o.isMesh){o.frustumCulled=false;o.castShadow=false;o.receiveShadow=false;
-      let nm=cm.get(o.material);if(!nm){nm=o.material.clone();cm.set(o.material,nm);curMats.push(nm);}o.material=nm;}
-  });
-  const fb=p=>{for(const [n,o] of byName)if(n.startsWith(p))return o;return null;};
-  const hb=fb('head_'),cb=fb('chest_'),pb=fb('pelvis_'),tip=fb('tongue7_end')||fb('jaw_')||hb;
-  if(!hb||!cb||!pb||!DRAGON_GLB.animations.length){console.warn('[dragon] expected bones/poses missing, legacy Cinder model used');disposeTree(root);return buildCinderLegacy();}
-  /* pose tables: one entry per animated node, defaults = rest values */
-  const clips={};DRAGON_GLB.animations.forEach(c=>{clips[c.name.split('|').pop()]=c;});
-  const data={},names=new Set();
-  for(const k of DR_PK){data[k]={};const c=clips[k];if(!c)continue;
-    for(const tr of c.tracks){const i=tr.name.lastIndexOf('.'),nn=tr.name.slice(0,i),pr=tr.name.slice(i+1);
-      if(!byName.has(nn)||!(pr==='position'||pr==='quaternion'||pr==='scale'))continue;
-      (data[k][nn]=data[k][nn]||{})[pr]=Array.from(tr.values.slice(0,pr==='quaternion'?4:3));names.add(nn);}}
-  R.pl=[];
-  for(const nn of names){const o=byName.get(nn),rest={position:o.position.toArray(),quaternion:o.quaternion.toArray(),scale:o.scale.toArray()},e={o};
-    for(const k of DR_PK){const d=data[k][nn]||{};e[k]={p:d.position||rest.position,q:d.quaternion||rest.quaternion,s:d.scale||rest.scale};}
-    R.pl.push(e);}
-  dragonPose(R,{ref:1,flightTest:0,flight_fire:0,angryFlightPose:0});
-  R.head=hb;R.spine=cb;R.hips=pb;R.body=rig;R.tip=tip;R.hdR=tip;R.hipsBase=0;R.bodyY=0;
-  /* hurtboxes follow the animated bones */
-  addSph(S,hb,0,0,0,1.0,1,true,'head');addSph(S,cb,0,0,0,1.9,.9,false,'torso');addSph(S,pb,0,0,0,1.6,.9,false,'pelvis');
-  const t8=fb('tail8_');if(t8)addSph(S,t8,0,0,0,1.1,.6,false,'leg');
-  for(const s of ['L','R']){const w1=fb('wingHand'+s+'_'),w2=fb('wingMiddle4'+s+'_');if(w1)addSph(S,w1,0,0,0,1.3,.7,false,'arm');if(w2)addSph(S,w2,0,0,0,1.2,.7,false,'arm');}
-  return{R,mats:curMats,sph:S};
-}
-/* key targets per attack: [windup, strike]; recover eases strike->0 */
-const DK={
- slash:[{pitch:.4,dy:.3,yaw:.4,spread:.4},{pitch:-.5,dy:-.1,yaw:-.5,fz:-1.6}],
- thrust:[{pitch:.15,fz:1,dy:.1},{pitch:-.25,fz:-2.8,dy:-.1}],
- wave:[{pitch:.25,fire:.6,dy:.4},{pitch:-.1,fire:1,dy:.4}],
- smash:[{pitch:.7,dy:1.2,angry:.8,spread:.8},{pitch:-.7,dy:-.6,fz:-1.2,angry:.2}],
- sweep:[{yaw:-1.3,roll:.1,spread:.6},{yaw:1.6,roll:-.1,spread:.9}],
- erupt:[{pitch:.4,angry:.7,dy:1},{pitch:.1,fire:1,dy:.8}],
- meteor:[{pitch:.5,dy:2.2,angry:1,spread:1},{pitch:-.3,dy:2.2,fire:1}]
-};
-DK.combo=DK.slash;
-function dragonTarget(b){
-  const T={pitch:0,yaw:0,roll:0,dy:0,fz:0,fire:0,angry:0,spread:0},a=b.atk;
-  if(b.st==='roar'){T.angry=1;T.spread=1;T.pitch=.35;T.dy=.6;return T;}
-  if(b.st==='stagger'){T.pitch=.45;T.roll=.15;T.dy=-.2;T.spread=.5;return T;}
-  if(b.st!=='attack'||!a)return T;
-  const pair=DK[a.id]||DK.slash,A=pair[0],B=Object.assign({},pair[1]),e=ease(b.u);
-  if(a.id==='combo'){const i=Math.min(2,Math.floor(b.stT/(a.gap||.5)));B.yaw=[-.5,.5,-.3][i];}
-  for(const k of DR_KEYS){const va=A[k]||0,vb=B[k]||0;T[k]=b.stage==='w'?va*e:b.stage==='s'?vb:vb*(1-e);}
-  return T;
-}
-function animCinder(b,dt){
-  const R=b.R;if(!R.dragon)return animCinderLegacy(b,dt);
-  const t=b.t,f2=b.phase>=2,tg=dragonTarget(b),cp=b.cp||(b.cp={pitch:0,yaw:0,roll:0,dy:0,fz:0,fire:0,angry:0,spread:0});
-  const rate=b.st==='attack'?(b.stage==='s'?34:b.stage==='w'?9:7):10,k=1-Math.exp(-rate*dt);
-  for(const key of DR_KEYS)cp[key]+=(tg[key]-cp[key])*k;
-  const walk=Math.min(1,b.mv/3.2);b.flyk=(b.flyk||0)+(walk-(b.flyk||0))*(1-Math.exp(-4*dt));const fly=b.flyk;
-  const flap=Math.sin(t*(f2?9:7)),idleTw=.12*(1+Math.sin(t*1.3))*(1-fly);
-  const spread=Math.max(cp.spread,fly*(.6+.4*flap),idleTw);
-  let rem=1;const wF=clamp(cp.fire,0,1);rem-=wF;const wA=Math.min(rem,clamp(cp.angry,0,1));rem-=wA;const wS=Math.min(rem,clamp(spread,0,1));rem-=wS;
-  dragonPose(R,{ref:rem,flightTest:wS,flight_fire:wF,angryFlightPose:wA});
-  R.rig.position.set(0,fly*1.4+cp.dy+Math.sin(t*1.6)*.05+Math.abs(flap)*.08*fly,cp.fz);
-  R.rig.rotation.set(cp.pitch-fly*.12,cp.yaw,cp.roll+Math.sin(b.ph*1.7)*.06*walk);
-  b.fs=(b.fs||1)+((f2?1.2:1)-(b.fs||1))*(1-Math.exp(-1.6*dt));R.rig.scale.setScalar(b.fs);
-  const pulse=f2?.18*Math.sin(t*5)+.12:0;b.mats[0].color.setRGB(1+(f2?.35:0)+pulse,1-(f2?.25:0)+pulse*.2,1-(f2?.3:0));
-  if(b.st!=='idle'&&b.st!=='dying'){
-    R.rig.updateMatrixWorld(true);
-    if(Math.random()<dt*(f2?26:12))fx(worldOf(R.tip),1,f2?0xff4a1a:0xff8a2a,2.5,.9,.14,-1.6,.8);
-    if(cp.fire>.5)fx(worldOf(R.tip),2,0xffd27a,6,.4,.2,0,.6);
-  }
-}
-function cinderDeath(b,dt){
-  const R=b.R;if(!R.dragon)return cinderDeathLegacy(b,dt);
-  b.deathT+=dt;const t=b.deathT,e=ease(clamp(t/2.4,0,1)),k=1-Math.exp(-6*dt);
-  R.rig.position.y+=(.5*e-R.rig.position.y)*k;R.rig.position.z+=(0-R.rig.position.z)*k;
-  R.rig.rotation.z+=(1.35*e-R.rig.rotation.z)*k;R.rig.rotation.x+=(.25*e-R.rig.rotation.x)*k;R.rig.rotation.y+=(0-R.rig.rotation.y)*k;
-  dragonPose(R,{ref:1-.7*e,flightTest:.7*e,flight_fire:0,angryFlightPose:0});
-  b.mats[0].color.setRGB(Math.max(.15,1.2-t*.3),Math.max(.1,.8-t*.25),Math.max(.1,.7-t*.25));
-  if(Math.random()<dt*50){R.rig.updateMatrixWorld(true);fx(worldOf(R.spine).add(new THREE.Vector3(rnd(-1.5,1.5),rnd(0,4),rnd(-1.5,1.5))),1,Math.random()<.5?0xff5a1f:0xffb02e,3,1,.2,-1.2,1.2);}
   if(!b.fell&&t>2.4){b.fell=true;const q=b.pos.clone();q.y=1.5;boom(q,5,0xff5a1f);sfxSlam(1);addShake(1);}
   if(t>3.2){const u=clamp((t-3.2)/1.8,0,1);b.vis=Math.max(.001,1-ease(u));if(u>=1&&!b.gone){b.gone=true;const q=b.pos.clone();q.y=2;boom(q,6,0xffb02e);b.root.visible=false;}}
 }
@@ -4119,7 +4010,6 @@ function boot(){
   if(IS_TOUCH)document.body.classList.add('touch');
   let _fsTried=false;const unlock=()=>{auInit();if(IS_TOUCH&&!_fsTried){_fsTried=true;goFull();}};addEventListener('pointerdown',unlock,{once:false,passive:true});
   try{initGL();}catch(e){console.error(e);noGL=true;}
-  preloadDragon();
   if(noGL){showMsg('เปิดกราฟิก 3D ไม่ได้','อุปกรณ์หรือเบราว์เซอร์นี้ไม่รองรับ WebGL ลองเปิดด้วย Chrome / Safari เวอร์ชันล่าสุด',[]);return;}
   setupInput();
   const tabs=document.querySelectorAll('#lbTabs button');tabs.forEach(b=>b.onclick=()=>{LB.tab=b.dataset.tab;sfxClick();renderLobby();});
