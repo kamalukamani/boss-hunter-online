@@ -2255,6 +2255,7 @@ function updatePlayer(dt,ctrl,t){
 function hurtPlayer(n,from){
   if(mode==='fight'&&!P.dead&&P.inv>0&&P.dgT>0){if(!P.dgHit){P.dgHit=true;toast('หลบสำเร็จ!');slowT=Math.max(slowT,.25);}return;}
   if(P.dead||P.inv>0||mode!=='fight')return;
+  if(NET.on&&NET.n>1)n*=1+.10*(NET.n-1);
   if(hasSk('iron'))n*=.9;
   P.hitAt=performance.now();if(P.sh>0){const ab=Math.min(P.sh,n);P.sh-=ab;n-=ab;if(P.sh<=0&&ab>0)toast('โล่แตก!');}statRecv(Math.min(n,P.hp));P.hp-=n;P.inv=.18;addShake(.5);sfxHurt();const v=$('vig');v.classList.add('on');setTimeout(()=>v.classList.remove('on'),90);
   if(from){const dx=from.x-P.pos.x,dz=from.z-P.pos.z;P.hurtDir=Math.atan2(-dx,-dz);}
