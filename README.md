@@ -91,3 +91,7 @@ npm run test:multi      # 4 ผู้เล่น: Scoreboard, Downed/Revive, Le
 npm run test:accounts
 ```
 การทดสอบจะสร้างบัญชีทดสอบในฐานข้อมูลที่กำหนด ควรใช้ฐานข้อมูลทดสอบแยกจากข้อมูลผู้เล่นจริง
+
+## Credits
+- Pistol model "blacktail" by photon (that one larry) - https://sketchfab.com/3d-models/blacktail-471d33746a374262ae775269ae3997c6 - licensed CC-BY-4.0.
+- Pistol shot sound: freesound_community "9mm pistol shot" (pixabay). Reload sound: dragon-studio "gun reload 2" (pixabay).
