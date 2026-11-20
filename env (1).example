@@ -1,0 +1,4 @@
+# Copy this file to .env for local development and fill in your own values.
+# Never commit .env or share it in chat.
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-host>/?retryWrites=true&w=majority
+MONGODB_DB_NAME=BossHunterOnline
